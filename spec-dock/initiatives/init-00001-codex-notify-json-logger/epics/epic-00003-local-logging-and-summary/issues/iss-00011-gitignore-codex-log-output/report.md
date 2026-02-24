@@ -53,6 +53,36 @@ uv run --frozen pytest -q
 
 ---
 
+### 2026-02-24 22:15 - 22:20
+
+#### 対象
+- Step: S03
+- AC/EC: AC-004（補強）
+
+#### 実施内容
+- 非UTF-8 の `.gitignore` 読み取りで例外が伝播しないようにし、warning-only で継続するようにした。
+- 非UTF-8 `.gitignore` のユニット/統合テストを追加した。
+
+#### 実行コマンド / 結果
+```bash
+uv run --frozen pytest -q
+# 結果: PASS（49 passed / exit code 0）
+```
+
+#### 変更したファイル
+- `src/codex_logger/gitignore.py` - `.gitignore` の read/write で `UnicodeError` を捕捉
+- `tests/test_gitignore.py` - 非UTF-8 `.gitignore` のテストを追加
+- `tests/test_log_store.py` - 非UTF-8 `.gitignore` の統合テストを追加
+- `spec-dock/active/issue/report.md` - 実装ログを追記
+
+#### コミット
+- 900bb2f fix(gitignore): 非UTF-8の.gitignoreでも継続する
+
+#### メモ
+- `.gitignore` がUTF-8で読めない場合は追記をスキップする（warning のみ）。
+
+---
+
 ## 遭遇した問題と解決 (任意)
 - 問題: ...
   - 解決: ...
