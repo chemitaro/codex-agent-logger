@@ -33,13 +33,32 @@ ID: "init-local-00001"
   - `.codexlog/summary.md` が毎回再生成され、時系列に並ぶこと
   - Telegram topic がセッション単位で作成/再利用され、最終アウトプットのみが届くこと
 - 情報源（ヒアリング/ログ/コード/ドキュメント等の根拠）:
-  - Codex CLI docs: `notify`（JSON は argv[1] として渡される）
+  - Codex CLI docs: `notify`（JSON はコマンド引数として渡される。追加引数がある場合は末尾になる）
   - ADR: `adrs/adr-00001-notify-logger-output-and-telegram.md`
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+hide footbox
+
+actor "Codex CLI" as Codex
+participant "notify handler\n(uvx / local)" as Handler
+database ".codexlog/logs/*.md" as Logs
+database ".codexlog/summary.md" as Summary
+database ".codexlog/telegram-topics.json" as Map
+participant "Telegram\n(optional)" as TG
+
+Codex -> Handler: exec notify command\n(+ JSON payload as arg)
+Handler -> Logs: write 1-event = 1-file (Markdown)\n(+ raw JSON)
+Handler -> Summary: rebuild from logs\n(tmp -> atomic replace)
+
+alt --telegram flag present
+  Handler -> Map: read/update mapping\n(lock + atomic replace)
+  Handler -> TG: create topic (if missing)\n+ sendMessage (chunked)
+else no flag
+  Handler -> Handler: skip Telegram
+end
 @enduml
 ```
 
@@ -63,13 +82,52 @@ ID: "init-local-00001"
   - ファイル名は日時プレフィックス + `thread-id` + `turn-id` に基づき、日時順ソートと衝突回避ができる。
     - ただし `thread-id`/`turn-id` を **生でファイル名へ埋め込まない**（危険文字/長さ/パストラバーサル対策）。ファイル名は正規化（sanitize/短縮/ハッシュ等）した値を使い、生値は Markdown 本文と raw JSON に残す。
   - Telegram 送信は `last-assistant-message` のみ（入力/トークン等は送らない）。
-  - Telegram 送信は argv[2] の `--telegram` 指定時のみ行う（フラグ無しなら送信しない）。
+  - Telegram 送信はフラグ `--telegram` 指定時のみ行う（フラグ無しなら送信しない）。
+  - ツールは uvx で実行できる（GitHub リポジトリ URL を `uvx --from ...` で指定して都度実行できる）。
 - MUST NOT:
   - OS 通知としてユーザーへポップアップ表示しない（notify の payload は保存/配信に使う）。
   - `.git/` やリポジトリ設定を変更しない（ブランチ操作や破壊的操作をしない）。
 - OUT OF SCOPE:
   - ログの自動削除/ローテーション（まずは保存と集約を優先）
   - 機密情報の自動マスキング（方針確定後に追加）
+
+## ディレクトリ構成（出力: `.codexlog/`） (必須)
+> 可読性と事故防止のため、出力は **2段構成**（個別ログ + フレッシュ生成サマリ）にする。
+
+### ツリー（概形）
+```text
+<cwd>/
+└── .codexlog/                                (dir)
+    ├── logs/                                 (dir)  # ファイル数 = notify 受信回数
+    │   ├── <ts>_<thread>_<turn>.md            (file) x N
+    │   └── ...
+    ├── summary.md                             (file) # 常に 1（再生成される派生物）
+    ├── summary.md.tmp                         (file) # 一時ファイル（原子置換用）
+    ├── telegram-topics.json                   (file) # 0..1（`--telegram` 運用時）
+    └── telegram-topics.json.tmp               (file) # 一時ファイル（原子置換用）
+```
+
+### ファイル構成数（目安）
+- `.codexlog/logs/*.md`: N（1イベント=1）
+- `.codexlog/summary.md`: 1
+- `.codexlog/telegram-topics.json`: 0..1（Telegram を使う場合のみ）
+
+### UML（任意） (任意)
+```plantuml
+@startuml
+skinparam monochrome true
+
+folder "<cwd>/.codexlog" {
+  folder "logs/ (N files)" {
+    file "<ts>_<thread>_<turn>.md"
+  }
+  file "summary.md"
+  file "summary.md.tmp"
+  file "telegram-topics.json (optional)"
+  file "telegram-topics.json.tmp"
+}
+@enduml
+```
 
 ## 非交渉制約（NFR/運用/セキュリティ） (必須)
 - 互換性:
@@ -105,7 +163,9 @@ ID: "init-local-00001"
 
 ## 制約・前提（Constraints / Assumptions） (必須)
 - 技術制約:
-  - `notify` は JSON を argv[1] で渡す（文字列として受け取り parse する）。
+  - `notify` は JSON をコマンド引数として付与する（追加引数がある場合、JSON は末尾になり得る）。
+  - ツールは JSON を **最後の引数**として解釈できるように実装する（`--telegram` 等のフラグと共存させるため）。
+  - ツールは uvx 実行を前提に配布する（GitHub リポジトリから直接実行できる Python パッケージ + console script）。
 - ビジネス制約:
   - まずは個人/小規模チーム運用を想定（厳密な監査要件は後回し）。
 - 法務/セキュリティ:
@@ -121,6 +181,7 @@ ID: "init-local-00001"
 - I-RQ-002: 1イベント=1ファイルのログが追える
 - I-RQ-003: summary（時系列結合）を毎回フレッシュ生成できる
 - I-RQ-004: Telegram に最終アウトプットのみ配信できる（topic をセッション単位で作る）
+- I-RQ-005: uvx で GitHub リポジトリ指定からツールを実行できる
 
 ## リスク/依存（Risks / Dependencies） (必須)
 - R-001: ログに機密が混入（影響: 情報漏洩 / 対応: 送信は最終アウトプットのみ + マスキング方針を後続で定義）
