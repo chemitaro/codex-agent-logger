@@ -1,0 +1,99 @@
+---
+種別: ADR（Architecture Decision Record）
+ID: "adr-00005"
+タイトル: "Dotenv loading strategy"
+状態: "accepted"
+作成者: "codex-agent"
+最終更新: "2026-02-24"
+親: ["init-00001"]
+---
+
+# adr-00005 Dotenv loading strategy（`.env` の取り扱い）
+
+## 結論（Decision） (必須)
+- 決定: ツール側で `.env` を **自動読込（存在する場合のみ）**し、無い場合は環境変数をそのまま使う。
+  - `.env` の探索場所: payload の `cwd` 直下（`<cwd>/.env` のみ、上位ディレクトリ探索はしない）
+  - 優先順位: **環境変数（実行時） > `.env`**（`.env` は未設定キーの補完として扱う）
+  - `uvx --env-file` は利用者が明示したい場合の補助として残す（必須にはしない）
+
+## 背景（Context） (必須)
+- 背景/制約（なぜ今決める必要があるか）:
+  - Telegram 連携は環境変数で設定するが、手元運用では `.env` を使いたいケースが多い。
+  - どの層（uvx / ツール本体）が `.env` を解釈するかで、依存や運用が変わる。
+  - uvx を GitHub 参照で実行する場合でも、実行される作業ディレクトリ（payload の `cwd`）側に `.env` が存在するとは限らないため、**環境変数のみでも成立**する必要がある。
+- 前提:
+  - `--telegram` 指定時のみ Telegram を送る（ログ保存は常に行う）。
+  - `.env` の自動読込は「便利だが依存が増える」トレードオフがある。
+
+### UML（`.env` の注入方式）
+```plantuml
+@startuml
+skinparam monochrome true
+hide footbox
+
+actor User
+participant uvx
+participant "codex-logger" as CLI
+
+alt Option A: uvx が .env を読む
+  User -> uvx: uvx --env-file .env --from <source> codex-logger ...
+  uvx -> CLI: env を設定して起動
+else Option B: ツールが .env を読む
+  User -> uvx: uvx --from <source> codex-logger ...
+  uvx -> CLI: 起動
+  CLI -> CLI: python-dotenv で .env 読込
+end
+@enduml
+```
+
+## 選択肢（Options considered） (必須)
+- Option A: uvx の `--env-file` を README で推奨（ツールは自動読込しない）
+  - 概要:
+    - `uvx --env-file .env ...` で、uvx に環境変数注入を委譲する
+  - Pros:
+    - ツール側の依存追加なし（シンプル）
+    - 「どの `.env` を使うか」がコマンドで明示できる
+  - Cons:
+    - `notify` 設定に `--env-file` を書く必要がある
+  - 棄却理由（棄却する場合）:
+    - 「毎回 `notify` 設定へ `--env-file` を書く」運用を避けたい（ツール側で補完したい）
+- Option B: ツール側で `.env` を自動読込（python-dotenv を導入）
+  - 概要:
+    - `cwd`（payload 由来）直下の `.env` を探索/読込し、環境変数を補完する（環境変数が優先）
+  - Pros:
+    - `notify` 設定が簡潔になる（`--env-file` 不要）
+  - Cons:
+    - 依存追加（python-dotenv）
+    - `.env` 探索ルールが増え、意図しない `.env` を読む事故の可能性がある
+  - 棄却理由（棄却する場合）:
+    - （採用）
+
+## 判断理由（Rationale） (必須)
+- 判断軸:
+  - 依存を増やさずに運用できるか（MVP の簡潔さ）
+  - 誤読込の事故を避けられるか（明示性）
+- 結論:
+  - Option B（ツール側で `.env` を自動読込、環境変数優先）
+
+## 影響（Consequences） (必須)
+- Positive（良い点）:
+  - `notify` 設定が簡潔になる（`--env-file` が必須ではない）
+  - `.env` が無い環境でも環境変数だけで動作する
+- Negative / Debt（悪い点 / 将来負債）:
+  - 依存追加（python-dotenv）と `.env` 読み取り規則が増える（ただし探索は `<cwd>/.env` のみに限定）
+- 影響範囲（コード/テスト/運用/データ）:
+  - `epic-00002` の README（実行例）
+  - `epic-00004` の env 不足時 warn（何が不足か）
+- 移行/ロールバック:
+  - 将来 Option B に切替える場合、依存追加と探索規則の導入が必要
+- Follow-ups（追加の Epic/Issue/ADR）:
+  - 結論確定後、この ADR を `accepted` にし、`epic-00002` の TBD を解消する
+
+## 参考（References） (任意)
+- 関連仕様（requirement/design/plan/report）:
+  - `spec-dock/initiatives/init-00001-codex-notify-json-logger/epics/epic-00002-packaging-and-cli/design.md`
+  - `spec-dock/initiatives/init-00001-codex-notify-json-logger/epics/epic-00004-telegram-topics-delivery/design.md`
+- PR/実装:
+  - （未実装）
+- 外部資料:
+  - uvx `--env-file`
