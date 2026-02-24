@@ -156,7 +156,7 @@ S -> Sum: atomic replace
   - `src/codex_logger/summary.py`: `logs/*.json` → Markdown
   - `tests/test_summary.py`: summary の並び/原子置換/不正 JSON のテスト
 - 変更（Modify）:
-  - `src/codex_logger/cli.py`: `iss-00008` の後に `summary.rebuild_summary(...)` を呼ぶ
+  - `src/codex_logger/cli.py`: `iss-00008` の `save_raw_payload` が返したパスから `base_dir = saved_path.parent.parent` を導出し、`summary.rebuild_summary(base_dir)` を呼ぶ（raw保存先と同一に揃える）
 - 削除（Delete）:
   - `<path/to/obsolete_file>`: <なぜ削除するか>
 - 移動/リネーム（Move/Rename）:

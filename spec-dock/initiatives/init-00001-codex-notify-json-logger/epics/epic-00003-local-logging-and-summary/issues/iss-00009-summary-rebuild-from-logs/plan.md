@@ -108,11 +108,21 @@ S2 --> S3
 - 設計参照:
   - `atomic.write_text_atomic`
   - `tests/test_summary.py::test_atomic_replace_keeps_old_on_failure`
+- 期待する振る舞い:
+  - `summary.md.tmp` への書き出し/`os.replace` に失敗しても、既存 `summary.md` は保持される
+  - この失敗は検知できるよう handler は **非0** で終了する（`adr-00008`）
+- 追加/更新するテスト:
+  - `tests/test_summary.py::test_atomic_replace_keeps_old_on_failure`
+  - `tests/test_cli_exit_codes.py::test_cli_nonzero_when_summary_rebuild_fails`
 
 ### S03 — lock により同時実行でも破損しない (必須)
 - 対象: EC-002
 - 設計参照:
   - `locks.file_lock`
+- 期待する振る舞い:
+  - lock により再構築区間が排他され、同時実行でも `summary.md` が破損しない
+- 追加/更新するテスト:
+  - `tests/test_summary.py::test_lock_prevents_corruption`（簡易）
 
 ---
 

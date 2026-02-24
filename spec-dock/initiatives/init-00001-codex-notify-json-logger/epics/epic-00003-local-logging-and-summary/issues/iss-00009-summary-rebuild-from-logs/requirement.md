@@ -55,6 +55,11 @@ Handler -> Sum: atomic replace\n(os.replace)
   - `summary.md.tmp` → `os.replace` の原子置換にする。
   - 同時実行でも破綻しない（ロック + 原子置換）。
   - JSON パース失敗が混ざっても summary 生成全体は失敗させない（エラーとして記録し継続）。
+  - `summary.md` の最小フォーマットを固定する（テスト可能な契約）:
+    - 先頭に `# Codex Logger Summary` を出力する
+    - 各ログファイルごとに `## <filename>` セクションを作る（`logs/` のファイル名昇順に並べる）
+    - パース成功時は最低限 `type`, `thread-id`, `turn-id`, `cwd` を箇条書きで出力する（欠損は `<missing>` として出力）
+    - パース失敗時は parse error（例外メッセージ）を記録する
 - MUST NOT（絶対にやらない／追加しない）:
   - `logs/*.json`（SSOT）を変更しない。
 - OUT OF SCOPE:
@@ -64,7 +69,7 @@ Handler -> Sum: atomic replace\n(os.replace)
 - Always（常に守る）:
   - summary は派生物であり、`logs/*.json` から再構成できる
 - Ask（迷ったら相談）:
-  - summary の出力フォーマット（読みやすさ vs 完全性）
+  - 該当なし（最小フォーマットは本Issueで固定。拡張は別Issue/ADRで扱う）
 - Never（絶対にしない）:
   - 追記更新（append）での summary 生成
 
@@ -97,14 +102,14 @@ Handler -> Sum: atomic replace\n(os.replace)
   - Actor/Role: 開発者
   - Given: 既存の `summary.md` がある
   - When: 再生成に失敗する（例: 書き込み不可）
-  - Then: 既存 `summary.md` は保持される（破損しない）
-  - 観測点: FS
+  - Then: 既存 `summary.md` は保持される（破損しない）かつ handler は **非0** で終了する（`adr-00008`）
+  - 観測点: FS / exit code
 - AC-003:
   - Actor/Role: 開発者
   - Given: JSON パースできないログが混ざる
   - When: summary を再生成する
-  - Then: summary に parse error が記録され、他ログは継続して出力される
-  - 観測点: summary.md
+  - Then: summary に parse error が記録され、他ログは継続して出力される（このケースは **exit 0**）
+  - 観測点: summary.md / exit code
 
 ### 入力→出力例 (任意)
 - EX-001:
