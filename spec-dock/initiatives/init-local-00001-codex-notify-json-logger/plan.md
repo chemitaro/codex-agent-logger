@@ -113,6 +113,8 @@ E3 --> E2 : ships CLI + env handling
     - B
   - 影響範囲:
     - Epic 00002 の実装と運用性
+  - 関連ADR:
+    - `adrs/adr-00002-telegram-topic-naming.md`
 
 ## 省略/例外メモ (必須)
 - 該当なし

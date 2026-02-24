@@ -216,6 +216,14 @@ notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codex-logge
 
 ## ADR index（意思決定の一覧） (必須)
 - adr-00001-notify-logger-output-and-telegram: 出力先/summary/Telegram topics/分割送信の方針
+- adr-00002-telegram-topic-naming: Telegram topic 名の命名規則（TBD）
+- adr-00003-filename-safe-id-format: ファイル名の safe id 形式（TBD）
+- adr-00004-python-build-backend: Python build backend 選定（TBD）
+- adr-00005-dotenv-loading-strategy: `.env` の注入方式（TBD）
+- adr-00006-uvx-ref-pinning-strategy: uvx の ref 固定運用（TBD）
+- adr-00007-telegram-chunk-numbering: Telegram 分割投稿の連番付与（TBD）
+- adr-00008-telegram-failure-exit-codes: Telegram 失敗時の exit code（TBD）
+- adr-00009-token-usage-logging: token 使用量の扱い（TBD）
 
 ## 未確定事項（TBD） (必須)
 - Q-001:

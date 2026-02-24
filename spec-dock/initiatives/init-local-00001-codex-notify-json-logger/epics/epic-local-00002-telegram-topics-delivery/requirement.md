@@ -120,14 +120,18 @@ end
 
 ## 未確定事項（TBD） (必須)
 - Q-001:
-  - 質問: TBD ...
+  - 質問: Telegram topic 名や分割投稿の見せ方など、運用上の UI 仕様をどこまで厳密にするか？
   - 選択肢:
-    - A: ...
-    - B: ...
+    - A: 最小（topic 名と連番/exit code は推奨案を採用）
+    - B: 仕様を厳密化（topic 名/連番/exit code を ADR で確定してから実装）
   - 推奨案（暫定）:
-    - ...
+    - B（先に ADR を確定してから実装）
   - 影響範囲:
-    - E-RQ / E-AC / スコープ / NFR / 依存 / ...
+    - E-RQ / E-AC / 実装 / テスト / 運用
+  - 関連ADR:
+    - `../../adrs/adr-00002-telegram-topic-naming.md`
+    - `../../adrs/adr-00007-telegram-chunk-numbering.md`
+    - `../../adrs/adr-00008-telegram-failure-exit-codes.md`
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] Initiative との紐づき（Goal/Metric）が明記されている
