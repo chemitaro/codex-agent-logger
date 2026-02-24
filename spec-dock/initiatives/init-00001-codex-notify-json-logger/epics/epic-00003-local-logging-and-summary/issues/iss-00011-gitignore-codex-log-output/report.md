@@ -46,7 +46,7 @@ uv run --frozen pytest -q
 - `spec-dock/active/issue/report.md` - 実装ログを追記
 
 #### コミット
-- <hash> feat(gitignore): .codex-logをgitignoreに自動追記
+- fcc0753 feat(gitignore): .codex-logをgitignoreに自動追記
 
 #### メモ
 - `.gitignore` の同等パターン判定は「trim + 完全一致」のみ（コメント行/空行は除外）。
