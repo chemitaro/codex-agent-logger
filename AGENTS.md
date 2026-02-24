@@ -17,9 +17,9 @@
 - Active pointers: `spec-dock/active/context-pack.md`
 - Initiative: `spec-dock/active/initiative/{requirement,design,plan}.md`
 - Epics:
-  - `spec-dock/active/initiative/epics/epic-local-00003-packaging-and-cli/`
-  - `spec-dock/active/initiative/epics/epic-local-00001-local-logging-and-summary/`
-  - `spec-dock/active/initiative/epics/epic-local-00002-telegram-topics-delivery/`
+  - `spec-dock/active/initiative/epics/epic-00002-packaging-and-cli/`
+  - `spec-dock/active/initiative/epics/epic-00003-local-logging-and-summary/`
+  - `spec-dock/active/initiative/epics/epic-00004-telegram-topics-delivery/`
 - ADR: `spec-dock/active/initiative/adrs/adr-00001-notify-logger-output-and-telegram.md`
 - 調査メモ: `spec-dock/active/initiative/artifacts/notify-payload.md`
 
@@ -27,6 +27,7 @@
 - Active 確認: `./spec-dock/scripts/spec-dock active show`
 - Validate: `./spec-dock/scripts/spec-dock validate`
 - Sync: `./spec-dock/scripts/spec-dock sync`
+- Sync（GitHub連携）: `./spec-dock/scripts/spec-dock sync --github`
 
 ## 実行例（uvx）
 ```bash

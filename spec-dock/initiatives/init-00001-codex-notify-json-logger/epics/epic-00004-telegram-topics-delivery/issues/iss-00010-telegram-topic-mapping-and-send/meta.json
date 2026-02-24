@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "type": "issue",
+  "id": "iss-00010",
+  "title": "Telegram Topic Mapping and Send",
+  "slug": "telegram-topic-mapping-and-send",
+  "created_at": "2026-02-24T14:31:32+09:00",
+  "updated_at": "2026-02-24T14:31:32+09:00",
+  "parent_id": "epic-00004",
+  "initiative_id": "init-00001",
+  "epic_id": "epic-00004",
+  "github": {
+    "issue_number": 10
+  }
+}
