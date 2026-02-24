@@ -2,103 +2,55 @@ from pathlib import Path
 
 import pytest
 
-from codex_logger.gitignore import ensure_codex_log_ignored
+from codex_logger.gitignore import ensure_codex_log_dir_ignored
 
 
-def test_ensure_creates_gitignore(tmp_path: Path) -> None:
+def test_ensure_creates_codex_log_gitignore(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
-    gitignore = workspace / ".gitignore"
+    codex_log_dir = workspace / ".codex-log"
+    gitignore = codex_log_dir / ".gitignore"
     assert not gitignore.exists()
 
-    changed = ensure_codex_log_ignored(workspace)
+    changed = ensure_codex_log_dir_ignored(codex_log_dir)
 
     assert changed is True
-    assert gitignore.read_text(encoding="utf-8") == ".codex-log/\n"
+    assert gitignore.read_text(encoding="utf-8") == "*\n"
 
 
-def test_ensure_appends_once(tmp_path: Path) -> None:
+def test_ensure_overwrites_nonstandard_codex_log_gitignore(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
-    gitignore = workspace / ".gitignore"
+    codex_log_dir = workspace / ".codex-log"
+    codex_log_dir.mkdir()
+
+    gitignore = codex_log_dir / ".gitignore"
     gitignore.write_text("dist/\n", encoding="utf-8")
 
-    changed = ensure_codex_log_ignored(workspace)
-    assert changed is True
-    assert gitignore.read_text(encoding="utf-8") == "dist/\n.codex-log/\n"
+    changed = ensure_codex_log_dir_ignored(codex_log_dir)
 
-    changed_again = ensure_codex_log_ignored(workspace)
+    assert changed is True
+    assert gitignore.read_text(encoding="utf-8") == "*\n"
+
+    changed_again = ensure_codex_log_dir_ignored(codex_log_dir)
     assert changed_again is False
-    assert gitignore.read_text(encoding="utf-8") == "dist/\n.codex-log/\n"
 
 
-@pytest.mark.parametrize(
-    "content",
-    [
-        ".codex-log/\n",
-        ".codex-log\n",
-        "/.codex-log/\n",
-        "/.codex-log\n",
-        "  .codex-log/  \n",
-        "  /.codex-log  \n",
-        "dist/\n.codex-log/\n",
-    ],
-)
-def test_ensure_noop_when_present(tmp_path: Path, content: str) -> None:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-
-    gitignore = workspace / ".gitignore"
-    gitignore.write_text(content, encoding="utf-8")
-
-    changed = ensure_codex_log_ignored(workspace)
-
-    assert changed is False
-    assert gitignore.read_text(encoding="utf-8") == content
-
-
-def test_ensure_appends_with_newline(tmp_path: Path) -> None:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-
-    gitignore = workspace / ".gitignore"
-    gitignore.write_text("dist/", encoding="utf-8")
-
-    changed = ensure_codex_log_ignored(workspace)
-
-    assert changed is True
-    assert gitignore.read_text(encoding="utf-8") == "dist/\n.codex-log/\n"
-
-
-def test_ensure_ignores_comments(tmp_path: Path) -> None:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-
-    gitignore = workspace / ".gitignore"
-    gitignore.write_text("# .codex-log/\n", encoding="utf-8")
-
-    changed = ensure_codex_log_ignored(workspace)
-
-    assert changed is True
-    assert gitignore.read_text(encoding="utf-8") == "# .codex-log/\n.codex-log/\n"
-
-
-def test_ensure_warns_on_non_utf8_gitignore(
+def test_ensure_warns_on_codex_log_gitignore_failure(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
-    gitignore = workspace / ".gitignore"
-    gitignore.write_bytes(b"\xff\xfe")
+    codex_log_dir = workspace / ".codex-log"
+    codex_log_dir.mkdir()
+    (codex_log_dir / ".gitignore").mkdir()
 
-    changed = ensure_codex_log_ignored(workspace)
+    changed = ensure_codex_log_dir_ignored(codex_log_dir)
 
     assert changed is False
-    assert gitignore.read_bytes() == b"\xff\xfe"
-
     stderr = capsys.readouterr().err
     assert "warn:" in stderr
     assert ".gitignore" in stderr

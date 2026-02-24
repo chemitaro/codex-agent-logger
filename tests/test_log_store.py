@@ -209,7 +209,49 @@ def test_incomplete_file_is_removed_on_write_failure(
     assert not expected_path.exists()
 
 
-def test_save_raw_payload_updates_gitignore_in_payload_cwd_not_process_cwd(
+def test_save_raw_payload_creates_codex_log_gitignore(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    raw_payload = _payload(workspace)
+
+    meta = parse_best_effort(raw_payload)
+    saved_path = save_raw_payload(
+        raw_payload, meta.cwd, meta.thread_id, meta.turn_id, now_utc=_fixed_now
+    )
+
+    assert saved_path.exists()
+    codex_log_gitignore = workspace.resolve(strict=False) / ".codex-log" / ".gitignore"
+    assert codex_log_gitignore.read_text(encoding="utf-8") == "*\n"
+
+
+def test_save_raw_payload_does_not_modify_root_gitignore(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    (workspace / ".gitignore").write_text("keep\n", encoding="utf-8")
+
+    raw_payload = _payload(workspace)
+    meta = parse_best_effort(raw_payload)
+    saved_path = save_raw_payload(
+        raw_payload, meta.cwd, meta.thread_id, meta.turn_id, now_utc=_fixed_now
+    )
+
+    assert saved_path.exists()
+    assert (workspace / ".gitignore").read_text(encoding="utf-8") == "keep\n"
+
+
+def test_save_raw_payload_does_not_create_root_gitignore(tmp_path: Path) -> None:
+    workspace = tmp_path / "workspace"
+    raw_payload = _payload(workspace)
+
+    meta = parse_best_effort(raw_payload)
+    saved_path = save_raw_payload(
+        raw_payload, meta.cwd, meta.thread_id, meta.turn_id, now_utc=_fixed_now
+    )
+
+    assert saved_path.exists()
+    assert not (workspace.resolve(strict=False) / ".gitignore").exists()
+
+
+def test_save_raw_payload_creates_gitignore_in_payload_cwd_not_process_cwd(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     workspace = tmp_path / "workspace"
@@ -217,7 +259,6 @@ def test_save_raw_payload_updates_gitignore_in_payload_cwd_not_process_cwd(
     workspace.mkdir()
     process_cwd.mkdir()
 
-    (process_cwd / ".gitignore").write_text("should-not-change\n", encoding="utf-8")
     monkeypatch.chdir(process_cwd)
 
     raw_payload = _payload(workspace)
@@ -227,16 +268,17 @@ def test_save_raw_payload_updates_gitignore_in_payload_cwd_not_process_cwd(
     )
 
     assert saved_path.exists()
-    assert (workspace / ".gitignore").read_text(encoding="utf-8") == ".codex-log/\n"
-    assert (process_cwd / ".gitignore").read_text(encoding="utf-8") == "should-not-change\n"
+    assert (workspace / ".codex-log" / ".gitignore").read_text(encoding="utf-8") == "*\n"
+    assert not (process_cwd / ".codex-log" / ".gitignore").exists()
 
 
-def test_save_raw_payload_warns_on_gitignore_failure_but_saves(
+def test_save_raw_payload_warns_on_codex_log_gitignore_failure_but_saves(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    (workspace / ".gitignore").mkdir()
+    (workspace / ".codex-log").mkdir()
+    (workspace / ".codex-log" / ".gitignore").mkdir()
 
     raw_payload = _payload(workspace)
     meta = parse_best_effort(raw_payload)
@@ -249,26 +291,4 @@ def test_save_raw_payload_warns_on_gitignore_failure_but_saves(
 
     stderr = capsys.readouterr().err
     assert "warn:" in stderr
-    assert ".gitignore" in stderr
-
-
-def test_save_raw_payload_warns_on_non_utf8_gitignore_but_saves(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    workspace = tmp_path / "workspace"
-    workspace.mkdir()
-    (workspace / ".gitignore").write_bytes(b"\xff\xfe")
-
-    raw_payload = _payload(workspace)
-    meta = parse_best_effort(raw_payload)
-    saved_path = save_raw_payload(
-        raw_payload, meta.cwd, meta.thread_id, meta.turn_id, now_utc=_fixed_now
-    )
-
-    assert saved_path.exists()
-    assert saved_path.read_bytes() == raw_payload.encode("utf-8")
-    assert (workspace / ".gitignore").read_bytes() == b"\xff\xfe"
-
-    stderr = capsys.readouterr().err
-    assert "warn:" in stderr
-    assert ".gitignore" in stderr
+    assert ".codex-log" in stderr or ".gitignore" in stderr

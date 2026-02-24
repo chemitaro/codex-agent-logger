@@ -120,6 +120,7 @@ uvx --env-file /path/to/.env --from git+https://github.com/chemitaro/codex-agent
 
 ```text
 <cwd>/.codex-log/
+├── .gitignore                # .codex-log/ 配下を ignore（自動生成）
 ├── logs/
 │   └── <ts>_<event-id>.json
 ├── summary.md
@@ -132,7 +133,7 @@ uvx --env-file /path/to/.env --from git+https://github.com/chemitaro/codex-agent
 
 - `logs/*.json` は 1イベント=1ファイル（raw payload）
 - `summary.md` は `logs/*.json` から毎回再構築
-- 誤コミット防止のため、`<cwd>/.gitignore` に `.codex-log/` を best-effort で自動追記します（無ければ作成 / 重複追記しない）
+- 誤コミット防止のため、`<cwd>/.codex-log/.gitignore` を best-effort で自動生成し、`.codex-log/` 配下を全て ignore します（`<cwd>/.gitignore` は変更しません）
 - `--telegram` はローカル保存成功後にベストエフォートで送信
 
 ## Troubleshooting
