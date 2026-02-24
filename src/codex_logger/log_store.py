@@ -53,6 +53,9 @@ def _ensure_directory(path: Path) -> None:
 
 def _try_chmod(path: Path, mode: int) -> None:
     try:
+        if path.is_symlink():
+            warn(f"skipping chmod for symlink {path}")
+            return
         os.chmod(path, mode)
     except OSError as exc:
         warn(f"failed to chmod {path}: {exc}")
