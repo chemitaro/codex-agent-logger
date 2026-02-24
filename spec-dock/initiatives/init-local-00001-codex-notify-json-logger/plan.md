@@ -22,8 +22,8 @@ ID: "init-local-00001"
   - 狙い（どの Goal/Metric に効くか）:
     - Metric 1（ログ生成 100%）の達成
   - 成果物（E2Eで提供するもの）:
-    - `notify` payload を受け取り `.codex-log/logs/*.md` を生成できる（raw JSON を同梱）
-    - `.codex-log/summary.md` を `logs/` から毎回フル再構築し、原子的に置換できる
+    - `notify` payload を受け取り `.codex-log/logs/*.json` を生成できる（raw payload / SSOT）
+    - `.codex-log/summary.md` を `logs/*.json` から毎回フル再構築し、原子的に置換できる（JSON→Markdown）
   - 依存:
     - Codex CLI `notify` の設定（どのイベントで呼ぶか）
 - epic-local-00002-telegram-topics-delivery:
@@ -53,7 +53,7 @@ ID: "init-local-00001"
   - ローカル保存が SSOT（必達）なので次に epic-local-00001 を実装する
   - Telegram は任意（外部依存/権限/漏洩リスク）があるため最後に epic-local-00002 を実装する
 - 並行できるもの / できないもの:
-  - 並行可: Telegram の API 仕様調査、topic 命名規則検討
+  - 並行可: Telegram の API 仕様調査、topic 作成/再利用（mapping）と分割送信の詳細詰め
   - 並行不可: ローカル保存のファイル形式/命名が固まらないと、Telegram 送信の整形が確定しにくい
 
 ### UML（任意） (任意)
@@ -97,24 +97,15 @@ E3 --> E2 : ships CLI + env handling
 
 ## 依存関係 / ブロッカー (必須)
 - D-001: Telegram supergroup topics の前提（解消条件: forum 有効 + Bot 権限付与）
-- D-002: token 使用量を扱うか（解消条件: 必要性と取得経路を決定）
 
 ## リスク対応計画（Top risks） (任意)
 - R-001: <リスク>（対応: ...）
 - ...
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: Telegram topic 名の命名規則はどうするか？
-  - 選択肢:
-    - A: `Codex <thread-id>`
-    - B: `<repo名> <thread-id>`（repo が無ければ cwd basename）
-  - 推奨案（暫定）:
-    - B
-  - 影響範囲:
-    - Epic 00002 の実装と運用性
-  - 関連ADR:
-    - `adrs/adr-00002-telegram-topic-naming.md`
+- 該当なし（意思決定済み）
+  - topic 命名: `adrs/adr-00002-telegram-topic-naming.md`
+  - token 使用量: `adrs/adr-00009-token-usage-logging.md`
 
 ## 省略/例外メモ (必須)
 - 該当なし

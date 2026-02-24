@@ -53,7 +53,7 @@ end
 
 - E-RQ-001（MUST）: `thread-id` 単位の topic を作成/再利用できる（mapping 永続化）
 - E-RQ-002（MUST）: 送信するのは `last-assistant-message` のみ（入力/トークン等は送らない）
-- E-RQ-003（MUST）: 4096 超過時に分割送信できる（改行優先＋フォールバック強制分割）
+- E-RQ-003（MUST）: 4096 超過時に分割送信できる（改行優先＋フォールバック強制分割 + 連番付与）
 - E-RQ-004（SHOULD）: mapping 更新は同時実行でも破損しない（ロック＋原子的置換）
 - E-RQ-005（MUST）: Telegram 送信はフラグ `--telegram` 指定時のみ行う（フラグ無しなら送信しない）
 - E-RQ-006（MUST）: `--telegram` 指定があるのに env が不足している場合は、送信せず stderr に警告を出す（ローカル保存は継続）
@@ -68,7 +68,7 @@ end
 - E-AC-002:
   - Given: `last-assistant-message` が 4096 文字を超える
   - When: handler を実行する
-  - Then: 複数投稿で全文が送られる（分割境界は改行優先）
+  - Then: 複数投稿で全文が送られる（分割境界は改行優先、各投稿に `(i/n)` 連番が付与される）
 - E-AC-003:
   - Given: Telegram 設定（env）が揃っているが `--telegram` フラグが無い
   - When: handler を実行する
@@ -90,7 +90,7 @@ end
 - Always（常に守る）:
   - Telegram はベストエフォート（ローカル保存優先）
 - Ask（迷ったら相談）:
-  - topic 名の命名規則、分割投稿の見せ方（連番付与の有無）
+  - 送信対象イベントの拡張（未知 `type` を送るかどうか）
 - Never（絶対にしない）:
   - 機密/入力を Telegram に送る
 
@@ -119,19 +119,10 @@ end
 - ...
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: Telegram topic 名や分割投稿の見せ方など、運用上の UI 仕様をどこまで厳密にするか？
-  - 選択肢:
-    - A: 最小（topic 名と連番/exit code は推奨案を採用）
-    - B: 仕様を厳密化（topic 名/連番/exit code を ADR で確定してから実装）
-  - 推奨案（暫定）:
-    - B（先に ADR を確定してから実装）
-  - 影響範囲:
-    - E-RQ / E-AC / 実装 / テスト / 運用
-  - 関連ADR:
-    - `../../adrs/adr-00002-telegram-topic-naming.md`
-    - `../../adrs/adr-00007-telegram-chunk-numbering.md`
-    - `../../adrs/adr-00008-telegram-failure-exit-codes.md`
+- 該当なし（意思決定済み）
+  - topic 命名: `../../adrs/adr-00002-telegram-topic-naming.md`
+  - 分割連番: `../../adrs/adr-00007-telegram-chunk-numbering.md`
+  - exit code: `../../adrs/adr-00008-telegram-failure-exit-codes.md`
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] Initiative との紐づき（Goal/Metric）が明記されている

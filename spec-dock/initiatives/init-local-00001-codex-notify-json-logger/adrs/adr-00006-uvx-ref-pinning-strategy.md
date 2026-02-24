@@ -2,7 +2,7 @@
 種別: ADR（Architecture Decision Record）
 ID: "adr-00006"
 タイトル: "Uvx ref pinning strategy"
-状態: "draft"
+状態: "accepted"
 作成者: "codex-agent"
 最終更新: "2026-02-24"
 親: ["init-local-00001"]
@@ -11,12 +11,9 @@ ID: "adr-00006"
 # adr-00006 Uvx ref pinning strategy（uvx の ref 固定運用）
 
 ## 結論（Decision） (必須)
-- **未決（TBD）**: `uvx --from git+...@<ref>` の `<ref>` をどう固定して運用するかを決める（tag / commit）。
-- ステータス運用:
-  - 結論が未決の間は `状態: draft`
-  - 結論が確定したら `accepted`
-- 決定（決定後に記入）:
-  - ...
+- 決定: **tag 固定を基本**とし、緊急時のみ commit sha を使う（Option A）。
+  - 通常運用: `uvx --from git+https://github.com/<owner>/<repo>@vX.Y.Z ...`
+  - 緊急時: `uvx --from git+https://github.com/<owner>/<repo>@<sha> ...`
 
 ## 背景（Context） (必須)
 - 背景/制約（なぜ今決める必要があるか）:
@@ -65,7 +62,7 @@ Dev --> Ops : choose ref\n(tag/sha)
   - 運用の分かりやすさ（人間が読める）
   - 再現性（いつでも同じものが動く）
   - rollback の容易さ
-- 推奨案（暫定）:
+- 結論:
   - Option A（tag 基本 + 緊急時 sha）
 
 ## 影響（Consequences） (必須)

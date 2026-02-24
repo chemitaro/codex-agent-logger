@@ -2,7 +2,7 @@
 種別: ADR（Architecture Decision Record）
 ID: "adr-00009"
 タイトル: "Token usage logging"
-状態: "draft"
+状態: "accepted"
 作成者: "codex-agent"
 最終更新: "2026-02-24"
 親: ["init-local-00001"]
@@ -11,12 +11,7 @@ ID: "adr-00009"
 # adr-00009 Token usage logging（token 使用量の扱い）
 
 ## 結論（Decision） (必須)
-- **未決（TBD）**: token 使用量をログに含めるか、含める場合は取得経路を決める。
-- ステータス運用:
-  - 結論が未決の間は `状態: draft`
-  - 結論が確定したら `accepted`
-- 決定（決定後に記入）:
-  - ...
+- 決定: MVP では token 使用量は扱わない（Option A）。
 
 ## 背景（Context） (必須)
 - 背景/制約（なぜ今決める必要があるか）:
@@ -74,7 +69,7 @@ O ..> T : Option C\n(OTel etc)
   - 正確性（推定か実測か）
   - MVP の範囲と複雑さ
   - payload と独立に実現できるか
-- 推奨案（暫定）:
+- 結論:
   - Option A（MVP では扱わない）
 
 ## 影響（Consequences） (必須)

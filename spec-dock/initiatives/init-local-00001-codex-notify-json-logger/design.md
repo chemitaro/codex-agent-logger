@@ -27,11 +27,11 @@ ID: "init-local-00001"
 ## 目指す姿（To-Be） (必須)
 - To-Be 概要（文章でOK。図は必要なら各セクション内の UML 小項目に）:
   - `notify` handler（ツール）は JSON payload を **コマンド引数として**受け取り（追加引数がある場合は末尾に付与されるため、最後の引数を JSON として解釈する）、`<cwd>/.codex-log/` へ保存する。
-  - `logs/` に「1イベント=1ファイル」を残し、`summary.md` は毎回フル再構築して **原子的に置換**する（`summary.md.tmp` → rename）。
+  - `logs/` に「1イベント=1ファイル」の **raw JSON（SSOT）** を残し、`summary.md` は毎回 JSON をパースして Markdown に変換して **原子的に置換**する（`summary.md.tmp` → rename）。
   - Telegram は任意で、環境変数が揃って **かつフラグ `--telegram` が指定された場合のみ**、`last-assistant-message` を topic へ送る。
 - 境界（モジュール/責務/データ境界の方針）:
   - 入力（payload）: Codex CLI notify JSON（raw を SSOT）
-  - 出力（永続）: Markdown ログ（+ raw JSON を同梱）
+  - 出力（永続）: raw JSON ログ（SSOT）+ summary Markdown（派生物）
   - 外部送信: Telegram（最終アウトプットのみ）
 
 ### UML（任意） (任意)
@@ -43,7 +43,7 @@ hide footbox
 actor "Codex CLI" as Codex
 participant "uvx\n(ephemeral venv)" as UVX
 participant "notify handler\n(console script)" as Handler
-database ".codex-log/logs/*.md" as Logs
+database ".codex-log/logs/*.json" as Logs
 database ".codex-log/summary.md" as Summary
 database ".codex-log/telegram-topics.json" as Map
 participant "Telegram\n(optional)" as TG
@@ -51,8 +51,8 @@ participant "Telegram\n(optional)" as TG
 Codex -> UVX: exec: uvx --from git+... codex-logger [--telegram] <payload-json>
 UVX -> Handler: run console script
 
-Handler -> Logs: write log.md\n(1 event = 1 file)
-Handler -> Summary: rebuild summary.md\n(tmp -> atomic replace)
+Handler -> Logs: write log.json\n(1 event = 1 file, raw payload)
+Handler -> Summary: rebuild summary.md\n(parse *.json -> Markdown)\n(tmp -> atomic replace)
 
 alt --telegram flag present
   Handler -> Map: read/update mapping\n(lock + atomic replace)
@@ -82,7 +82,7 @@ package "Codex CLI" {
 }
 
 package "<cwd>/.codex-log" {
-  [logs/*.md] as LogFiles
+  [logs/*.json] as LogFiles
   [summary.md] as Summary
   [telegram-topics.json] as TopicMap
 }
@@ -115,10 +115,10 @@ Notify --> TopicMap : mapping (optional)
 ## 契約（外部I/F・データ境界） (必須)
 - 外部I/F（API/イベント/ファイル等）:
   - 入力: コマンド引数の末尾に付与される JSON 文字列（`notify` payload）
-  - 出力: `<cwd>/.codex-log/logs/*.md`, `<cwd>/.codex-log/summary.md`
+  - 出力: `<cwd>/.codex-log/logs/*.json`, `<cwd>/.codex-log/summary.md`
   - 外部API（任意）: Telegram Bot API（topic 作成、メッセージ投稿）
 - データ境界（どこが正で、どこまで整合性を要求するか）:
-  - SSOT: 保存した raw JSON（ログ Markdown 内の JSON ブロック）
+  - SSOT: 保存した raw JSON（`logs/*.json`）
   - summary.md は派生物（常に `logs/` から再生成可能）
 
 ## 移行 / ロールアウト方針（原則） (必須)
@@ -216,26 +216,19 @@ notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codex-logge
 
 ## ADR index（意思決定の一覧） (必須)
 - adr-00001-notify-logger-output-and-telegram: 出力先/summary/Telegram topics/分割送信の方針
-- adr-00002-telegram-topic-naming: Telegram topic 名の命名規則（TBD）
-- adr-00003-filename-safe-id-format: ファイル名の safe id 形式（TBD）
-- adr-00004-python-build-backend: Python build backend 選定（TBD）
-- adr-00005-dotenv-loading-strategy: `.env` の注入方式（TBD）
-- adr-00006-uvx-ref-pinning-strategy: uvx の ref 固定運用（TBD）
-- adr-00007-telegram-chunk-numbering: Telegram 分割投稿の連番付与（TBD）
-- adr-00008-telegram-failure-exit-codes: Telegram 失敗時の exit code（TBD）
-- adr-00009-token-usage-logging: token 使用量の扱い（TBD）
+- adr-00002-telegram-topic-naming: Telegram topic 名の命名規則
+- adr-00003-filename-safe-id-format: ファイル名の safe id 形式
+- adr-00004-python-build-backend: Python build backend 選定
+- adr-00005-dotenv-loading-strategy: `.env` の注入方式
+- adr-00006-uvx-ref-pinning-strategy: uvx の ref 固定運用
+- adr-00007-telegram-chunk-numbering: Telegram 分割投稿の連番付与
+- adr-00008-telegram-failure-exit-codes: Telegram 失敗時の exit code
+- adr-00009-token-usage-logging: token 使用量の扱い
+- adr-00010-event-log-format-json-files: 個別ログは JSON、summary は Markdown
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: token 使用量を扱う場合、どの取得経路を採るか？（現行 notify payload には token 情報が無い）
-  - 選択肢:
-    - A: 扱わない（MVP は raw 保存 + 最終アウトプット）
-    - B: 受信側で tokenizer により推定（モデル依存）
-    - C: OTel 等の別経路で取得し紐づけ（実装が別系統）
-  - 推奨案（暫定）:
-    - A: MVP では扱わず、必要なら別ADRで意思決定する
-  - 影響範囲:
-    - Markdown の表示、テスト観点
+- 該当なし（意思決定済み）
+  - token 使用量: `adrs/adr-00009-token-usage-logging.md`（MVPでは扱わない）
 
 ## 失敗時ポリシー（暫定） (必須)
 - ローカル保存（個別ログ or summary）に失敗: 非0で終了（通知フック失敗として検知できる）

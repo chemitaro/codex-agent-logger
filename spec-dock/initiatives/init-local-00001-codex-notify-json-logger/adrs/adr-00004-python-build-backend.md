@@ -2,7 +2,7 @@
 種別: ADR（Architecture Decision Record）
 ID: "adr-00004"
 タイトル: "Python build backend"
-状態: "draft"
+状態: "accepted"
 作成者: "codex-agent"
 最終更新: "2026-02-24"
 親: ["init-local-00001"]
@@ -11,12 +11,7 @@ ID: "adr-00004"
 # adr-00004 Python build backend（ビルドバックエンド選定）
 
 ## 結論（Decision） (必須)
-- **未決（TBD）**: `codex-logger` を uvx で実行可能にするための build backend（PEP 517）を選定する。
-- ステータス運用:
-  - 結論が未決の間は `状態: draft`
-  - 結論が確定したら `accepted`
-- 決定（決定後に記入）:
-  - ...
+- 決定: build backend は **hatchling**（Option A）を採用する。
 
 ## 背景（Context） (必須)
 - 背景/制約（なぜ今決める必要があるか）:

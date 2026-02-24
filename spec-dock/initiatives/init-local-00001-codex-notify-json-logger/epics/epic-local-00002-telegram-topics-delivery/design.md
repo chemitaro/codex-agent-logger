@@ -17,6 +17,7 @@ ID: "epic-local-00002"
   - 入力:
     - notify payload の `thread-id` / `last-assistant-message`
     - env: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+      - `.env` は `<cwd>/.env` を自動読込（存在する場合のみ、環境変数が優先。`adr-00005`）
     - CLI flag: `--telegram`
   - 出力:
     - topic 作成（必要な場合） + `sendMessage`（分割送信）
@@ -54,7 +55,8 @@ end
 - API-001: `createForumTopic`（topic 作成）
   - Request（最小）:
     - `chat_id`: `TELEGRAM_CHAT_ID`
-    - `name`: topic 名（命名規則は Initiative の Q-002）
+    - `name`: topic 名（`adr-00002` に従い `<cwd_basename> (<thread-id>)`）
+      - 制約: UTF-8 で 128 bytes 以下（超える場合は `thread-id` 短縮 + `cwd_basename` 切り詰めで収める）
   - Response（使うもの）:
     - `result.message_thread_id`
   - Errors（代表）:
@@ -105,11 +107,17 @@ object "telegram-topics.json" as Map {
 - Flow A（E-AC-001）:
   1) `--telegram` でなければ送信しない（E-AC-003）
   2) env 未設定なら送信しない（warn; 不足キーが分かる文言/理由コードを stderr に出す）
-  3) mapping をロード（無ければ空）
-  4) `thread-id` の topic が無ければ `createForumTopic` で作成し、mapping を保存
-  5) `last-assistant-message` を分割して `sendMessage`（複数回）
-- Flow B（E-AC-002）:
+  3) payload を検証し、送信可否を決める
+     - `thread-id` が欠損/空なら warn して送信しない（topic が作れないため）
+     - `last-assistant-message` が欠損/空なら warn して送信しない（送る本文が無いため）
+  4) mapping をロード（無ければ空）
+  5) `thread-id` の topic が無ければ `createForumTopic` で作成し、mapping を保存
+  6) `last-assistant-message` を分割して `sendMessage`（複数回）
+  - Flow B（E-AC-002）:
   - 4) の分割アルゴリズムを適用し、4096 文字以内のチャンク列へ変換して送信する
+    - 分割は改行境界優先 + 強制分割フォールバック
+    - 各チャンク先頭に `(i/n)\\n` を付与する（`adr-00007`）
+      - 分割は prefix 長を差し引いて行う（例: `max_body_len = 4096 - len(prefix)`）
 
 ### UML（任意） (任意)
 ```plantuml
@@ -143,7 +151,7 @@ end
 - 冪等性/重複排除:
   - 送信は idempotent ではない（重複投稿の可能性は許容）
 - 部分失敗の扱い:
-  - Telegram 失敗は stderr warn。ローカル保存は別 Epic で必達
+  - Telegram 失敗は stderr warn（`adr-00008`）。ローカル保存は別 Epic で必達
 
 ## 移行戦略（Migration / Rollout） (必須)
 - 戦略:
@@ -182,17 +190,13 @@ end
 
 ## ADR index（重要な決定は ADR に寄せる） (必須)
 - adr-00001-notify-logger-output-and-telegram: `.codex-log` 構成、Telegram 方針（optional）
+- adr-00002-telegram-topic-naming: topic 命名（`<cwd_basename> (<thread-id>)`）
+- adr-00005-dotenv-loading-strategy: `<cwd>/.env` 自動読込（env 優先）
+- adr-00007-telegram-chunk-numbering: 分割連番（`(i/n)\\n`）
+- adr-00008-telegram-failure-exit-codes: Telegram 失敗時は warn + exit 0
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: topic 名の命名規則（人間にとって見やすい名前）はどれを採るか？
-  - 選択肢:
-    - A: `Codex <thread-id>`（機械的）
-    - B: `<repo名> <thread-id>`（repo 無ければ cwd basename）
-  - 推奨案（暫定）:
-    - B
-  - 影響範囲:
-    - topic 作成、運用
+- 該当なし（意思決定済み: `adr-00002`）
 
 ## 省略/例外メモ (必須)
 - 該当なし

@@ -70,6 +70,9 @@ CLI -> Lib: dispatch\n(parse flags + payload)
 - バリデーション/不変条件（Invariant）:
   - CLI は payload を JSON としてパースできること（不正 JSON は usage error）
   - `--telegram` はフラグであり、payload と混同しないこと
+- Packaging/依存:
+  - build backend は hatchling（`adr-00004`）
+  - `.env` 自動読込のため `python-dotenv` を依存として含める（`adr-00005`。環境変数が優先）
 
 ### UML（任意） (任意)
 ```plantuml
@@ -168,17 +171,12 @@ N --> CLI: payload object
 
 ## ADR index（重要な決定は ADR に寄せる） (必須)
 - adr-00001-notify-logger-output-and-telegram: 出力先/summary/Telegram topics/分割送信の方針（Initiative）
+- adr-00004-python-build-backend: build backend（hatchling）
+- adr-00005-dotenv-loading-strategy: `.env` 自動読込（env 優先、`<cwd>/.env` のみ）
+- adr-00006-uvx-ref-pinning-strategy: uvx の ref 固定（tag 基本 + 緊急時 sha）
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: `--env-file`（uvx 機能）を README で推奨するか、ツール側で `.env` を自動読込するか？
-  - 選択肢:
-    - A: uvx の `--env-file` を推奨（依存追加なし）
-    - B: python-dotenv を導入し自動読込（依存追加あり）
-  - 推奨案（暫定）:
-    - A
-  - 影響範囲:
-    - README、依存、実装の単純さ
+- 該当なし（意思決定済み: `adr-00005-dotenv-loading-strategy`）
 
 ## 省略/例外メモ (必須)
 - 該当なし

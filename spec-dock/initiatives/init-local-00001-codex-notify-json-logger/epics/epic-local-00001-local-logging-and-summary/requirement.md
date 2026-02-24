@@ -20,7 +20,7 @@ ID: "epic-local-00001"
 
 ## ユースケース（User journeys） (必須)
 - Happy path:
-  - `agent-turn-complete` を受信 → `.codex-log/logs/*.md` を作成 → `summary.md` を再生成
+  - `agent-turn-complete` を受信 → `.codex-log/logs/*.json` を作成 → `summary.md` を再生成（JSON→Markdown）
 - 例外/運用シナリオ:
   - `.codex-log/` が無い状態から初回実行する
   - 既存ログが多数ある状態でも、毎回 `summary.md` が壊れずに生成される
@@ -34,19 +34,19 @@ hide footbox
 
 actor "Codex CLI" as Codex
 participant "codex-logger" as Handler
-database ".codex-log/logs/*.md" as Logs
+database ".codex-log/logs/*.json" as Logs
 database ".codex-log/summary.md" as Summary
 
 Codex -> Handler: exec notify\n(+ payload json as arg)
-Handler -> Logs: write <ts>_<thread>_<turn>.md
-Handler -> Summary: rebuild (tmp -> atomic replace)
+Handler -> Logs: write <ts>_<event-id>.json\n(raw payload)
+Handler -> Summary: rebuild from *.json\n(parse -> Markdown)\n(tmp -> atomic replace)
 @enduml
 ```
 
 ## 要求（Epic-level requirements） (必須)
 > “Issueに分割して実装される前提の、E2E要求” を列挙する。
 
-- E-RQ-001（MUST）: `<cwd>/.codex-log/logs/` にログ Markdown を保存できる（raw JSON 同梱）
+- E-RQ-001（MUST）: `<cwd>/.codex-log/logs/` にログ JSON（raw payload）を保存できる（SSOT）
 - E-RQ-002（MUST）: `summary.md` を `logs/` からフル再構築し、原子的に置換できる（結合順はファイル名昇順で決定的）
 - E-RQ-003（MUST）: ファイル名に `thread-id`/`turn-id` を生で埋め込まない（正規化/短縮/ハッシュ等）
 - E-RQ-004（SHOULD）: payload の未知フィールド/任意フィールド欠損に耐える（raw は常に残す）
@@ -63,9 +63,9 @@ Handler -> Summary: rebuild (tmp -> atomic replace)
 - E-AC-002:
   - Given: `.codex-log/logs/` に複数ログが存在する
   - When: handler を実行する
-  - Then: `.codex-log/summary.md` が `logs/` の時系列順で結合され、壊れない（原子的置換）
+  - Then: `.codex-log/summary.md` が `logs/*.json` を時系列順（ファイル名昇順）に解析して生成され、壊れない（原子的置換）
 - E-AC-003:
-  - Given: 同じファイル名になり得る条件（同一 `<ts>_<safe-thread>_<safe-turn>`）で既存ログが存在する
+  - Given: 同じファイル名になり得る条件（同一 `<ts>_<event-id>`）で既存ログが存在する
   - When: handler を実行する
   - Then: 既存ログを上書きせず、別名（例: `__01` など）で新しいログが保存される
 - E-AC-004:
@@ -114,17 +114,7 @@ Handler -> Summary: rebuild (tmp -> atomic replace)
 - ...
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: ファイル名の safe id 形式はどれを採るか？
-  - 選択肢:
-    - A: `sha256(id)[:8]` のみ（安全/短いが可読性低い）
-    - B: slug + hash（可読性はあるが実装が少し増える）
-  - 推奨案（暫定）:
-    - A
-  - 影響範囲:
-    - E-RQ / E-AC / テスト / 運用（ファイル名）
-  - 関連ADR:
-    - `../../adrs/adr-00003-filename-safe-id-format.md`
+- 該当なし（`adr-00003` で safe id 形式は確定）
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] Initiative との紐づき（Goal/Metric）が明記されている

@@ -8,8 +8,9 @@
 - ツール名/CLI: `codex-logger`
 - 入力: Codex CLI `notify` が渡す JSON payload（**コマンド引数の末尾**）
 - 出力（ローカル必達）: `<cwd>/.codex-log/`
-  - `<cwd>/.codex-log/logs/` に 1イベント=1Markdown
-  - `<cwd>/.codex-log/summary.md` は `logs/` から毎回フル再構築（`summary.md.tmp` → rename の原子置換）
+  - `<cwd>/.codex-log/logs/` に 1イベント=1JSON（raw payload / SSOT）
+    - 命名: `<ts>_<event-id>.json`（衝突時のみ suffix: `__01`, `__02`...）
+  - `<cwd>/.codex-log/summary.md` は `logs/*.json` から毎回フル再構築（JSON→Markdown、`summary.md.tmp` → rename の原子置換）
 - Telegram（任意）: `--telegram` 指定時のみ、`last-assistant-message` のみ送信（入力や raw JSON は送らない）
 
 ## 重要な仕様ソース（SSOT）
@@ -46,7 +47,9 @@ uvx --from /path/to/local/clone codex-logger '<payload-json>'
 ## Telegram 環境変数（予定）
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
-- `.env` を使う場合は（原則）uvx 側の `--env-file` を使う（詳細は Epic 00003 の設計参照）
+- `.env` を使う場合:
+  - `<cwd>/.env` をツール側で自動読込（存在する場合のみ、環境変数が優先）
+  - uvx 側の `--env-file` は任意（明示したい場合の補助）
 
 ## マルチエージェント運用
 - 実装前: reviewer エージェントで spec/ADR をレビュー
@@ -57,4 +60,3 @@ uvx --from /path/to/local/clone codex-logger '<payload-json>'
 - 破壊的操作（履歴改変/強制更新など）は禁止
 - `git add` / `git commit` はユーザーの明示的な指示がある場合のみ
 - コミットメッセージ: Conventional Commits（日本語、複数行必須）
-

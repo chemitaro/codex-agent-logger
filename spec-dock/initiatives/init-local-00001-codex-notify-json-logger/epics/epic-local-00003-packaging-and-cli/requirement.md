@@ -89,7 +89,7 @@ CLI -> CLI: parse flags\n(parse payload from last arg)
   - CLI コマンド名は `codex-logger` とする
   - notify payload は「末尾引数」を JSON として扱う（Codex の付与仕様と共存）
 - Ask（迷ったら相談）:
-  - build backend（hatchling / setuptools など）の選択と、依存追加（HTTP クライアント等）
+  - 依存追加（HTTP クライアント等）と、公開/配布範囲（PyPI など）
 - Never（絶対にしない）:
   - 破壊的・不可逆な Git 操作（履歴改変/強制更新など）
 
@@ -116,15 +116,7 @@ CLI -> CLI: parse flags\n(parse payload from last arg)
 - R-002: CLI 契約の破壊（影響: notify が動かない / 対応: 引数パースの自動テストを必須化）
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: build backend は何を採用するか？（hatchling / setuptools 等）
-  - 選択肢:
-    - A: hatchling（設定が少なく現代的）
-    - B: setuptools（互換性が高い）
-  - 推奨案（暫定）:
-    - A（hatchling）
-  - 影響範囲:
-    - 実装（pyproject）、CI、開発体験
+- 該当なし（意思決定済み: `../../adrs/adr-00004-python-build-backend.md`）
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] Initiative との紐づき（Goal/Metric）が明記されている

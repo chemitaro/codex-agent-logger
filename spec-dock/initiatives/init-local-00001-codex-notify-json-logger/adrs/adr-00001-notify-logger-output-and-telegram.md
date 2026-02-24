@@ -18,21 +18,27 @@ ID: "adr-00001"
 - ログ保存先/構成:
   - ルート: `<cwd>/.codex-log/`
     - ここでの `<cwd>` は payload の `cwd` を正とし、正規化（realpath 相当）して採用する。
-  - 個別ログ: `<cwd>/.codex-log/logs/<ts>_<thread-id>_<turn-id>.md`
+  - 個別ログ: `<cwd>/.codex-log/logs/<ts>_<event-id>.json`
+    - 個別ログのフォーマット（raw JSON / SSOT）は `adr-00010` に従う。
+    - safe id（`event-id`）の形式は `adr-00003` に従う（`thread-id`/`turn-id` を生でファイル名に入れない）。
+    - ファイル名衝突時のみ suffix を付与する（例: `...__01.json`）。
   - 結合サマリ: `<cwd>/.codex-log/summary.md`
-    - 更新方法: 受信のたびに `logs/` を時系列（ファイル名ソート）で結合して **フル再構築**する。
+    - 更新方法: 受信のたびに `logs/*.json` を時系列（ファイル名ソート）で走査し、JSON をパースして Markdown に変換して **フル再構築**する。
       - `summary.md` の再構築は同時実行で壊れないよう、再構築区間をロックする（例: `.codex-log/summary.lock` を用いた OS レベルの排他）。
       - 出力は `summary.md.tmp` に書き出してから原子的に置換する（失敗時は旧 `summary.md` を保持する）。
 - ファイル命名:
-  - `<ts>` は日時プレフィックス（例: `2026-02-24T09-53-12.345Z` のように、ソートしやすくファイル名として安全な形式）
-  - 衝突回避として `thread-id` と `turn-id` を含める。
-  - ただし `thread-id`/`turn-id` は **生でファイル名へ埋め込まない**（危険文字/長さ対策）。ファイル名は正規化（sanitize/短縮/ハッシュ等）した値を使い、生値は Markdown 本文と raw JSON に残す。
-  - それでも同名が発生し得るため、ファイルは **排他的作成**（例: `O_EXCL` 相当）で書き込み、衝突時はサフィックス（例: `__01`, `__02`）を付けて必ず別名で保存する（上書きしない）。
-- Markdown 保存フォーマット（方針）:
-  - 先頭ヘッダーに `type`, `thread-id`, `turn-id`, `cwd` 等のメタ情報（＋存在すれば token 情報）を記録する。
-  - 本文に `last-assistant-message` を人間が読みやすい形で記録する。
-  - 末尾に raw JSON をコードブロックで保存する（完全性優先）。
-  - 補足: 現行の `notify` payload には token 使用量は含まれないため、必要なら別経路（tokenizer 推定/OTel 等）で扱う。
+  - `<ts>` は UTC の日時プレフィックスで固定する（例: `2026-02-24T09-53-12.345Z`）。
+    - 形式: `YYYY-MM-DDTHH-MM-SS.mmmZ`（ファイル名安全のため `:` は `-` に置換）
+    - ソート: 文字列の辞書順 = 時系列順
+  - `event-id` は `thread-id` と `turn-id` の複合IDを短縮ハッシュ化した safe id を使う（`adr-00003`）。生値は raw JSON 内に残す。
+  - 衝突回避:
+    - 通常は suffix 無しで保存する（例: `..._<event-id>.json`）
+    - 既存ファイルと衝突した場合のみ suffix を付与する（例: `..._<event-id>__01.json`, `...__02.json`）
+    - 実装: **排他的作成**（例: `O_EXCL` 相当）で書き込み、存在したら suffix を増やして再試行する（上書きしない）。
+- 保存フォーマット（方針）:
+  - 個別ログ（SSOT）: `.codex-log/logs/*.json` に notify payload を raw で保存する（詳細は `adr-00010`）。
+  - サマリ（派生物）: `summary.md` は JSON をパースして Markdown を生成する（raw JSON は summary に含めない）。
+  - 補足: 現行の `notify` payload には token 使用量は含まれないため、必要なら別経路（tokenizer 推定/OTel 等）で扱う（`adr-00009`）。
   - セキュリティ（権限）: `.codex-log/` と `logs/` は 0700、ログファイルは 0600 を意図し、可能な範囲で restrictive に作成する（OS/FS が非対応の場合はベストエフォート）。
 - Telegram 送信:
   - 前提: Telegram supergroup で topics（forum）を有効化し、Bot に topic 作成権限を付与する。
@@ -69,7 +75,7 @@ hide footbox
 
 actor "Codex CLI" as Codex
 participant "codex-logger\n(handler)" as Handler
-database ".codex-log/logs/*.md" as Logs
+database ".codex-log/logs/*.json" as Logs
 database ".codex-log/summary.md" as Summary
 participant "Telegram\n(optional)" as TG
 
@@ -88,7 +94,7 @@ end
 - Option A: `<cwd>/.codex-log/` へ保存（採用）
   - 概要:
     - payload 内の `cwd` を基点に、隠しディレクトリ `.codex-log/` を作成してログを保存する。
-    - 1イベント=1Markdown を `logs/` に保存し、`summary.md` は毎回フレッシュ生成する。
+    - 1イベント=1JSON（raw payload）を `logs/` に保存し、`summary.md` は JSON から毎回フレッシュ生成する。
     - Telegram は supergroup の topics（forum）を前提に、`thread-id`（=セッション相当）ごとに topic を作成/再利用して送信する。
   - Pros:
     - 利用ディレクトリ直下を汚しにくい（開発中のノイズを抑制）
@@ -116,7 +122,7 @@ skinparam monochrome true
 
 folder "<cwd>/.codex-log" {
   folder "logs/" {
-    file "<ts>_<thread>_<turn>.md"
+    file "<ts>_<event-id>.json"
   }
   file "summary.md"
   file "telegram-topics.json (optional)"
@@ -166,9 +172,9 @@ LS --> TG : enabled by --telegram
 
 ## 参考（References） (任意)
 - 関連仕様（requirement/design/plan/report）:
-  - `spec-dock/active/initiative/requirement.md`
-  - `spec-dock/active/initiative/design.md`
-  - `spec-dock/active/initiative/plan.md`
+  - `spec-dock/initiatives/init-local-00001-codex-notify-json-logger/requirement.md`
+  - `spec-dock/initiatives/init-local-00001-codex-notify-json-logger/design.md`
+  - `spec-dock/initiatives/init-local-00001-codex-notify-json-logger/plan.md`
 - PR/実装:
   - ...
 - 外部資料:

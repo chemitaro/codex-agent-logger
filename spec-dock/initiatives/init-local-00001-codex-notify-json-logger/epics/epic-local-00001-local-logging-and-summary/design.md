@@ -15,7 +15,7 @@ ID: "epic-local-00001"
 ## 全体像（Context / Scope） (必須)
 - 対象境界（モジュール/責務/データ境界）:
   - 入力: notify payload（JSON 文字列。追加引数がある場合は末尾に付与されるため、`codex-logger` は **末尾引数を JSON** として扱う）
-  - 出力: `<cwd>/.codex-log/logs/*.md` と `<cwd>/.codex-log/summary.md`
+  - 出力: `<cwd>/.codex-log/logs/*.json`（SSOT raw payload）と `<cwd>/.codex-log/summary.md`（派生物）
 - 既存フローとの関係:
   - Codex CLI `notify` から呼ばれる前提
 - 影響範囲（FE/BE/DB/ジョブ/外部連携）:
@@ -29,12 +29,12 @@ hide footbox
 
 actor "Codex CLI" as Codex
 participant "codex-logger" as Handler
-database ".codex-log/logs/*.md" as Logs
+database ".codex-log/logs/*.json" as Logs
 database ".codex-log/summary.md" as Summary
 
 Codex -> Handler: exec notify\n(+ payload json)
-Handler -> Logs: write markdown\n(1 event = 1 file)
-Handler -> Summary: rebuild summary\n(tmp -> atomic replace)
+Handler -> Logs: write raw payload json\n(1 event = 1 file, exclusive create)
+Handler -> Summary: rebuild from *.json\n(parse -> Markdown)\n(tmp -> atomic replace)
 @enduml
 ```
 
@@ -45,7 +45,7 @@ Handler -> Summary: rebuild summary\n(tmp -> atomic replace)
     - `--telegram`: (optional) Telegram 送信を有効にするフラグ（送信実装は別 Epic）
     - `<payload-json>`: notify payload（JSON）。本ツールは **末尾引数**を JSON として解釈する
   - 出力:
-    - `<cwd>/.codex-log/logs/*.md`
+    - `<cwd>/.codex-log/logs/*.json`（SSOT: raw payload）
     - `<cwd>/.codex-log/summary.md`
   - エラー:
     - filesystem 書き込み失敗は非0終了（ローカル保存は必達）
@@ -63,7 +63,7 @@ Handler -> Summary: rebuild summary\n(tmp -> atomic replace)
 
 ### データ境界（System of Record / 整合性）
 - SoR（正のデータ）:
-  - `logs/*.md` に保存する raw JSON
+  - `logs/*.json` に保存する raw payload（`adr-00010`）
 - 整合性モデル（強整合/結果整合）:
   - `summary.md` は `logs/` から再生成可能な派生物（結果整合で良い）
 
@@ -71,8 +71,12 @@ Handler -> Summary: rebuild summary\n(tmp -> atomic replace)
 > DB ではなくファイル出力だが、破損しないための不変条件を定める。
 
 - 変更点（ファイル/フォーマット）:
-  - 1イベント=1Markdown（ヘッダー + 本文 + raw JSON ブロック）
-  - summary.md は `logs/` を **ファイル名昇順**で結合する（決定的）
+  - 1イベント=1JSON（raw payload / SSOT）:
+    - ファイル: `.codex-log/logs/<ts>_<event-id>.json`
+      - `<ts>`: UTC の `YYYY-MM-DDTHH-MM-SS.mmmZ`（`adr-00001`）
+      - 衝突時のみ suffix を付与（例: `...__01.json`, `...__02.json`）
+    - `event-id` 形式は `adr-00003` に従う（`thread-id`/`turn-id` を生でファイル名へ入れない）
+  - `summary.md` は `logs/` を **ファイル名昇順**で走査し、各 `.json` をパースして Markdown に変換して生成する（決定的）
 - バリデーション/不変条件（Invariant）:
   - ファイル名は安全化された値のみ（`thread-id`/`turn-id` を生で含めない）
   - ログファイルは排他的作成で書き込み、衝突時はサフィックス（例: `__01`）で必ず別名保存（上書きしない）
@@ -87,7 +91,7 @@ skinparam monochrome true
 
 folder "<cwd>/.codex-log" {
   folder "logs/" {
-    file "<ts>_th-<hash>_tu-<hash>.md"
+    file "<ts>_<event-id>.json"
   }
   file "summary.md"
   file "summary.md.tmp"
@@ -98,7 +102,9 @@ folder "<cwd>/.codex-log" {
 ## 主要フロー（高レベル） (必須)
 - Flow A（E-AC-001）:
   1) notify payload（JSON）を parse して `cwd/thread-id/turn-id/...` を抽出（欠損は warn）
-  2) `<cwd>/.codex-log/logs/` にログ Markdown を 1 件書き出す（raw JSON を同梱、排他的作成、権限は restrictive）
+     - `cwd` が欠損/不正な場合は `os.getcwd()` へフォールバックし、正規化して採用する
+     - `thread-id` / `turn-id` が欠損/空の場合は `event-id` 生成用の複合キーをセンチネル値で補完する（例: `event-key = \"missing-thread-id:missing-turn-id\"`）
+  2) `<cwd>/.codex-log/logs/` に raw JSON を 1 件書き出す（排他的作成、権限は restrictive）
   3) lock → `logs/` を **ファイル名昇順**で結合して `summary.md` をフル再構築し、原子的に置換する
 - Flow B（E-AC-002）:
   - Flow A の 3) を繰り返し実行しても、常に壊れない summary が得られる
@@ -114,8 +120,8 @@ database "logs/" as Logs
 file "summary.md.tmp" as Tmp
 file "summary.md" as Summary
 
-Handler -> Logs: list *.md (sorted)
-Handler -> Tmp: write concatenated
+Handler -> Logs: list *.json (sorted)
+Handler -> Tmp: write Markdown summary\n(parse each json)
 Handler -> Summary: rename(tmp -> summary)\n(atomic)
 @enduml
 ```
@@ -131,7 +137,8 @@ Handler -> Summary: rename(tmp -> summary)\n(atomic)
   - ファイル名に `<ts>` を含むため、同一イベントの再実行は別ファイルになり得る（重複排除は OUT OF SCOPE）
 - 部分失敗の扱い（補償/再実行/整合性）:
   - `summary.md` は派生物なので、再実行で復旧可能
-  - ただし「更新失敗を見逃さない」ため、個別ログ保存に成功していても summary 再構築に失敗したら非0で終了する（ログ自体は残す）
+  - ただし「更新失敗を見逃さない」ため、個別ログ保存に成功していても summary の原子置換に失敗したら非0で終了する（ログ自体は残す）
+  - 互換性のため、`logs/*.json` の**個々のパース失敗**は原則 warn とし、summary 生成自体は継続する（summary 内に「パース失敗」エントリを残す）
 
 ## 移行戦略（Migration / Rollout） (必須)
 - 戦略:
@@ -157,7 +164,7 @@ Handler -> Summary: rename(tmp -> summary)\n(atomic)
 - Unit:
   - ファイル名の安全化（ID→safe id）
   - 同名衝突時のリトライ（サフィックス付与）
-  - summary の分割/結合（順序）
+  - summary の再生成（順序、JSON→Markdown、パース失敗の表現）
 - Integration:
   - temp dir 上で `logs/` と `summary.md` の生成を検証
 - E2E:
@@ -173,17 +180,11 @@ Handler -> Summary: rename(tmp -> summary)\n(atomic)
 
 ## ADR index（重要な決定は ADR に寄せる） (必須)
 - adr-00001-notify-logger-output-and-telegram: `.codex-log` 構成、原子置換、Telegram 分離
+- adr-00003-filename-safe-id-format: safe id（短縮ハッシュ）
+- adr-00010-event-log-format-json-files: 個別ログは JSON、summary は Markdown
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: ファイル名の safe id 形式はどれを採るか？
-  - 選択肢:
-    - A: `sha256(id)[:8]` のみ（安全/短いが可読性低い）
-    - B: slug + hash（可読性はあるが実装が少し増える）
-  - 推奨案（暫定）:
-    - A（MVP は安全性優先。ID 生値は本文と raw JSON にある）
-  - 影響範囲:
-    - ファイル名、テスト
+- 該当なし（意思決定済み: `adr-00003`）
 
 ## 省略/例外メモ (必須)
 - 該当なし
