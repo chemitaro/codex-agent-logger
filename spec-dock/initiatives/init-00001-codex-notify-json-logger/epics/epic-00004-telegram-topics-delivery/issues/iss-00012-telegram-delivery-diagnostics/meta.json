@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "type": "issue",
+  "id": "iss-00012",
+  "title": "Telegram delivery diagnostics",
+  "slug": "telegram-delivery-diagnostics",
+  "created_at": "2026-02-24T23:49:51+09:00",
+  "updated_at": "2026-02-24T23:49:51+09:00",
+  "parent_id": "epic-00004",
+  "initiative_id": "init-00001",
+  "epic_id": "epic-00004",
+  "github": {
+    "issue_number": 12
+  }
+}
