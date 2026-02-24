@@ -21,24 +21,40 @@ ID: "epic-local-00001"
   - なし（まずは最小分割で進める）
 
 ## Issue 一覧（順序付き） (必須)
-- iss-xxxx-... (MVP: log 保存 + summary 生成):
+- iss-xxxx-... (MVP: 1イベント=1ファイルのログ保存):
   - 目的:
-    - notify payload を `.codexlog/` に保存し、summary を原子的に再生成する
+    - notify payload を `.codex-log/` に 1イベント=1ファイルで保存する（raw JSON 同梱）
   - 成果物（Deliverable）:
-    - `.codexlog/logs/*.md` の生成
-    - `.codexlog/summary.md` のフル再構築 + 原子的置換
+    - `.codex-log/logs/*.md` の生成
     - ファイル名の安全化（ID 正規化）
+    - 排他的作成 + 衝突時サフィックスで上書き回避
+    - 可能な範囲で restrictive な権限（例: dir 0700 / file 0600）
+    - 末尾引数 JSON の解釈（`--telegram` 等のフラグと共存できる）
   - 対応する E-RQ / E-AC:
-    - E-RQ-001..003 / E-AC-001..002
+    - E-RQ-001..005 / E-AC-001
   - Depends on:
-    - ...
-- iss-xxxx-...:
-  - ...
+    - epic-local-00003（Packaging and CLI）の CLI 土台（pyproject/entrypoint/テスト基盤）
+- iss-xxxx-... (MVP: summary のフル再構築 + 原子置換):
+  - 目的:
+    - `.codex-log/summary.md` を `logs/` から時系列に結合して再生成する
+  - 成果物（Deliverable）:
+    - summary 再構築区間のロック（同時実行でも破綻しない）
+    - `summary.md.tmp` → rename の原子置換
+    - 失敗時に旧 `summary.md` が保持される
+  - 対応する E-RQ / E-AC:
+    - E-RQ-002,006 / E-AC-002
+  - Depends on:
+    - 1イベント=1ファイルのログ保存
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+
+rectangle "iss-... log file" as I1
+rectangle "iss-... summary rebuild" as I2
+
+I1 --> I2
 @enduml
 ```
 
@@ -50,11 +66,11 @@ ID: "epic-local-00001"
 
 ## ロールアウト / 移行 (必須)
 - Feature flag:
-  - ...
+  - なし（常時有効）
 - 段階公開（カナリア/一部テナント/内部先行など）:
-  - ...
+  - なし（ローカル運用）
 - ロールバック:
-  - ...
+  - `notify` から handler を外す
 
 ## Issue Definition of Ready（Issue に求める着手可能条件） (必須)
 - [ ] Issue requirement に AC/EC がテスト可能な形で書けている
@@ -65,20 +81,20 @@ ID: "epic-local-00001"
 - [ ] 未確定事項が「質問/選択肢/推奨案/影響範囲」で整理されている
 
 ## 実行コマンド（必要なら） (任意)
-- Test: `<command>`
+- Test: `pytest -q`
 - Lint/Format: `<command>`
 - Typecheck: `<command>`
 
 ## 未確定事項（TBD） (必須)
 - Q-001:
-  - 質問: TBD ...
+  - 質問: ファイル名の safe id 形式はどれを採るか？（設計の推奨は sha256 短縮）
   - 選択肢:
-    - A: ...
-    - B: ...
+    - A: `sha256(id)[:8]` のみ（安全/短いが可読性低い）
+    - B: slug + hash（可読性はあるが実装が少し増える）
   - 推奨案（暫定）:
-    - ...
+    - A
   - 影響範囲:
-    - Issue分割 / 順序 / ロールアウト / 品質ゲート / ...
+    - Issue 実装、テスト、出力ファイル名
 
 ## 省略/例外メモ (必須)
 - 該当なし

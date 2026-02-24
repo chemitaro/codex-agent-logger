@@ -25,12 +25,26 @@ ID: "epic-local-00002"
   - Telegram 設定が無い（ローカル保存のみで継続）
   - Telegram API 失敗（429/ネットワーク）でもローカル保存は成功させる（ベストエフォート）
   - 超長文（改行無し 4096 超）でも送信できる（強制分割）
-  - argv[2] に `--telegram` が無い場合は、Telegram 設定があっても送信しない（ログ保存は継続）
+  - `--telegram` フラグが無い場合は、Telegram 設定があっても送信しない（ログ保存は継続）
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+hide footbox
+
+actor "Codex CLI" as Codex
+participant "codex-logger" as Handler
+database ".codex-log/telegram-topics.json" as Map
+participant "Telegram\n(supergroup topics)" as TG
+
+Codex -> Handler: exec notify\n(+ payload json)
+alt --telegram flag present
+  Handler -> Map: read/update mapping
+  Handler -> TG: create topic (if missing)\n+ sendMessage (chunked)
+else no flag
+  Handler -> Handler: skip Telegram
+end
 @enduml
 ```
 
@@ -41,7 +55,8 @@ ID: "epic-local-00002"
 - E-RQ-002（MUST）: 送信するのは `last-assistant-message` のみ（入力/トークン等は送らない）
 - E-RQ-003（MUST）: 4096 超過時に分割送信できる（改行優先＋フォールバック強制分割）
 - E-RQ-004（SHOULD）: mapping 更新は同時実行でも破損しない（ロック＋原子的置換）
-- E-RQ-005（MUST）: Telegram 送信は argv[2] の `--telegram` 指定時のみ行う（フラグ無しなら送信しない）
+- E-RQ-005（MUST）: Telegram 送信はフラグ `--telegram` 指定時のみ行う（フラグ無しなら送信しない）
+- E-RQ-006（MUST）: `--telegram` 指定があるのに env が不足している場合は、送信せず stderr に警告を出す（ローカル保存は継続）
 
 ## 受け入れ条件（Epic DoD / E2E） (必須)
 - E-AC-001:
@@ -55,9 +70,13 @@ ID: "epic-local-00002"
   - When: handler を実行する
   - Then: 複数投稿で全文が送られる（分割境界は改行優先）
 - E-AC-003:
-  - Given: Telegram 設定（env）が揃っているが argv[2] に `--telegram` が無い
+  - Given: Telegram 設定（env）が揃っているが `--telegram` フラグが無い
   - When: handler を実行する
   - Then: Telegram API が呼ばれない（送信しない）
+- E-AC-004:
+  - Given: `--telegram` フラグがあるが Telegram 設定（env）が不足している
+  - When: handler を実行する
+  - Then: Telegram API は呼ばれず、stderr に「無効化理由」が出力される（exit code はローカル保存の成否に従う）
 
 ## スコープ (必須)
 - MUST:
@@ -84,6 +103,7 @@ ID: "epic-local-00002"
   - `TELEGRAM_BOT_TOKEN` 等は環境変数で注入し、ログに出さない
 - 運用性（監視/アラート/Runbook）:
   - 失敗は stderr warn（非致命）として観測できる
+  - env 不足時も stderr warn で理由が分かる
 
 ## 依存 / 影響範囲 (必須)
 - 影響コンポーネント（FE/BE/DB/ジョブ/外部連携）:

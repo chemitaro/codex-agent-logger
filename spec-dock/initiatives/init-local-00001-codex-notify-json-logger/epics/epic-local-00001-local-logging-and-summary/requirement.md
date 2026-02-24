@@ -15,47 +15,67 @@ ID: "epic-local-00001"
 - Initiative のどの Goal / Metric に効くか:
   - Metric 1（`agent-turn-complete` 受信のたびにローカルログ生成 100%）
 - この Epic が提供する能力（E2E）:
-  - `notify` payload（argv[1] JSON）を受信し、`<cwd>/.codexlog/logs/` に 1イベント=1ファイルで保存できる
+  - `notify` payload（コマンド引数として付与され、`codex-logger` では **末尾引数を JSON として解釈**）を受信し、`<cwd>/.codex-log/logs/` に 1イベント=1ファイルで保存できる
   - `summary.md` を毎回フル再構築して原子的に置換できる
 
 ## ユースケース（User journeys） (必須)
 - Happy path:
-  - `agent-turn-complete` を受信 → `.codexlog/logs/*.md` を作成 → `summary.md` を再生成
+  - `agent-turn-complete` を受信 → `.codex-log/logs/*.md` を作成 → `summary.md` を再生成
 - 例外/運用シナリオ:
-  - `.codexlog/` が無い状態から初回実行する
+  - `.codex-log/` が無い状態から初回実行する
   - 既存ログが多数ある状態でも、毎回 `summary.md` が壊れずに生成される
   - payload の任意フィールド欠損（`last-assistant-message` 無し等）でも raw 保存が継続される
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+hide footbox
+
+actor "Codex CLI" as Codex
+participant "codex-logger" as Handler
+database ".codex-log/logs/*.md" as Logs
+database ".codex-log/summary.md" as Summary
+
+Codex -> Handler: exec notify\n(+ payload json as arg)
+Handler -> Logs: write <ts>_<thread>_<turn>.md
+Handler -> Summary: rebuild (tmp -> atomic replace)
 @enduml
 ```
 
 ## 要求（Epic-level requirements） (必須)
 > “Issueに分割して実装される前提の、E2E要求” を列挙する。
 
-- E-RQ-001（MUST）: `<cwd>/.codexlog/logs/` にログ Markdown を保存できる（raw JSON 同梱）
-- E-RQ-002（MUST）: `summary.md` を `logs/` からフル再構築し、原子的に置換できる
+- E-RQ-001（MUST）: `<cwd>/.codex-log/logs/` にログ Markdown を保存できる（raw JSON 同梱）
+- E-RQ-002（MUST）: `summary.md` を `logs/` からフル再構築し、原子的に置換できる（結合順はファイル名昇順で決定的）
 - E-RQ-003（MUST）: ファイル名に `thread-id`/`turn-id` を生で埋め込まない（正規化/短縮/ハッシュ等）
 - E-RQ-004（SHOULD）: payload の未知フィールド/任意フィールド欠損に耐える（raw は常に残す）
+- E-RQ-005（MUST）: 同名ファイルが発生しても上書きせず、排他的作成 + サフィックス等で必ず別名保存できる
+- E-RQ-006（MUST）: `summary.md` の再構築は同時実行でも壊れない（ロック等で再構築区間を排他する）
 
 ## 受け入れ条件（Epic DoD / E2E） (必須)
 - E-AC-001:
   - Given: `agent-turn-complete` の notify payload を受け取る
   - When: handler を実行する
-  - Then: `.codexlog/logs/` に 1 ファイルが作成され、raw JSON が保存されている
+  - Then: `.codex-log/logs/` に 1 ファイルが作成され、raw JSON が保存されている
   - 観測点（UI/HTTP/DB/Log 等）:
     - filesystem
 - E-AC-002:
-  - Given: `.codexlog/logs/` に複数ログが存在する
+  - Given: `.codex-log/logs/` に複数ログが存在する
   - When: handler を実行する
-  - Then: `.codexlog/summary.md` が `logs/` の時系列順で結合され、壊れない（原子的置換）
+  - Then: `.codex-log/summary.md` が `logs/` の時系列順で結合され、壊れない（原子的置換）
+- E-AC-003:
+  - Given: 同じファイル名になり得る条件（同一 `<ts>_<safe-thread>_<safe-turn>`）で既存ログが存在する
+  - When: handler を実行する
+  - Then: 既存ログを上書きせず、別名（例: `__01` など）で新しいログが保存される
+- E-AC-004:
+  - Given: 同一 `cwd` に対して handler が同時に複数起動される
+  - When: それぞれがログ保存 + summary 再構築まで実行する
+  - Then: `summary.md` が破損せず、最終的に全ログが含まれる（古いログ集合で上書きされない）
 
 ## スコープ (必須)
 - MUST:
-  - `.codexlog/` 配下への保存と summary 生成
+  - `.codex-log/` 配下への保存と summary 生成
 - MUST NOT:
   - Telegram 送信（別 Epic）
 - OUT OF SCOPE:
@@ -76,12 +96,13 @@ ID: "epic-local-00001"
   - `summary.md` は一時ファイル経由で原子的に置換（失敗時は旧ファイルを保持）
 - セキュリティ:
   - ログは入力を含む可能性があるため取り扱い注意（外部送信はしない）
+  - `.codex-log/` と `logs/` は 0700、ログファイルは 0600 を意図し、可能な範囲で restrictive に作成する
 - 運用性（監視/アラート/Runbook）:
   - 失敗は stderr に出し、exit code で検知できる
 
 ## 依存 / 影響範囲 (必須)
 - 影響コンポーネント（FE/BE/DB/ジョブ/外部連携）:
-  - ローカル filesystem（`.codexlog/`）
+  - ローカル filesystem（`.codex-log/`）
 - 外部依存（他チーム/外部API/権限/契約）:
   - なし
 - 互換性（破壊的変更の有無 / バージョニング方針）:
