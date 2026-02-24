@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from codex_logger.cli import main, parse_args
@@ -37,7 +39,14 @@ def test_normal_run_without_payload_is_usage_error(capsys: pytest.CaptureFixture
         ["--telegram", '{"type":"agent-turn-complete"}'],
     ],
 )
-def test_payload_json_with_or_without_telegram(argv: list[str]) -> None:
+def test_payload_json_with_or_without_telegram(
+    argv: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "codex_logger.cli.log_store.save_raw_payload",
+        lambda *_args, **_kwargs: Path("/tmp/raw-payload.json"),
+    )
+
     args = parse_args(argv)
     assert args.payload_json == '{"type":"agent-turn-complete"}'
     assert args.telegram == ("--telegram" in argv)
@@ -61,3 +70,4 @@ def test_unknown_or_extra_args_are_usage_error(
 
     stderr = capsys.readouterr().err
     assert "usage:" in stderr
+
