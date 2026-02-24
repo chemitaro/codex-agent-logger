@@ -16,6 +16,7 @@ ID: "iss-00011"
 - `codex-logger` 実行時に `<cwd>/.codex-log/.gitignore` を best-effort で自動生成し、`.codex-log/` 配下の全ファイル/全ディレクトリを ignore する（`*`）。
 - `<cwd>/.gitignore` は作成/変更しない（利用者リポジトリの汚染を避ける）。
 - payload の `cwd` と実行時 `cwd` が異なる場合も、payload 側のみ `.codex-log/.gitignore` を生成することをテストで保証した。
+- `<cwd>/.codex-log/` が symlink の場合、意図せず外部ファイルを上書きし得るため `.codex-log/.gitignore` の生成/更新をスキップし、warning-only で継続する。
 
 ## 実装記録（セッションログ） (必須)
 
@@ -115,6 +116,33 @@ uv run --frozen pytest -q
 
 #### メモ
 - `.gitignore` をルートで更新する方式は「利用者リポジトリ汚染」の指摘により要件から外れたため、`.codex-log/` 内で完結する方式に変更した。
+
+---
+
+### 2026-02-24 23:30 - 23:40
+
+#### 対象
+- Step: S03（補強）
+- AC/EC: EC-003
+
+#### 実施内容
+- `.codex-log` が symlink の場合は `.codex-log/.gitignore` を生成/更新せず、warning-only で継続するようにした（外部ファイル上書き回避）。
+- symlink のリグレッションテストを追加した。
+- 要件/設計/計画に EC-003 を追記した。
+
+#### 実行コマンド / 結果
+```bash
+uv run --frozen pytest -q
+# 結果: PASS（43 passed / exit code 0）
+```
+
+#### 変更したファイル
+- `src/codex_logger/gitignore.py` - `.codex-log` がsymlinkの場合のガードを追加
+- `tests/test_gitignore.py` - symlink のテストを追加
+- `spec-dock/active/issue/{requirement,design,plan}.md` - EC-003 を追記
+
+#### コミット
+- 9b8da58 fix(gitignore): symlink時は.gitignore生成をスキップ
 
 ## 遭遇した問題と解決 (任意)
 - 問題: ...
