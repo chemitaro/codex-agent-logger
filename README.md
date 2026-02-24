@@ -12,6 +12,21 @@ uvx --from . codex-logger --help
 
 `--help` は Telegram の環境変数が未設定でも実行できます。
 
+## ローカル直接実行（uvx を使わない）
+
+ローカル clone の開発中に「uvx のビルド/キャッシュで古い実装を掴む」切り分けが面倒な場合は、`scripts/codex-logger-dev` を使って **ソースを直接実行**できます。
+
+```bash
+./scripts/codex-logger-dev --help
+
+PAYLOAD='{"type":"agent-turn-complete","thread-id":"thread_123","turn-id":"turn_456","cwd":"'"$PWD"'","input-messages":["hello"],"last-assistant-message":"done"}'
+./scripts/codex-logger-dev "$PAYLOAD"
+./scripts/codex-logger-dev --telegram "$PAYLOAD"
+```
+
+※ `uv` が必要です（`uvx` を使っている環境なら通常入っています）。  
+※ 実行できない場合は `chmod +x ./scripts/codex-logger-dev` を試してください。
+
 ## Run via uvx
 
 `codex-logger` は `uvx` で実行します。通常運用は tag 固定を推奨し、緊急時のみ commit sha 固定を使います（詳細は ADR 参照）。
@@ -78,6 +93,20 @@ notify = ["uvx", "--from", "/path/to/local/clone", "codex-logger", "--telegram"]
 
 ※ `--from` のパスは、Codex を実行する作業ディレクトリから見えるパス（絶対パス/相対パス）を指定してください。
 
+ローカル clone を直接実行（開発/検証向け、uvx を使わない）:
+
+```toml
+# ~/.codex/config.toml
+notify = ["/path/to/local/clone/scripts/codex-logger-dev"]
+```
+
+ローカル clone を直接実行 + Telegram あり:
+
+```toml
+# ~/.codex/config.toml
+notify = ["/path/to/local/clone/scripts/codex-logger-dev", "--telegram"]
+```
+
 ## Telegram（任意）を使う場合の前提
 
 - 対象チャットは **supergroup** を使用する
@@ -126,7 +155,9 @@ uvx --env-file /path/to/.env --from git+https://github.com/chemitaro/codex-agent
 ├── summary.md
 ├── summary.lock
 ├── telegram-topics.json      # --telegram 利用時に作成
-└── telegram-topics.lock      # --telegram 利用時に作成
+├── telegram-topics.lock      # --telegram 利用時に作成
+└── telegram-errors/          # --telegram のスキップ/失敗時（best-effort）
+    └── <ts>_<event-id>.md
 ```
 
 補足:
@@ -144,6 +175,7 @@ uvx --from . codex-logger --help
 ```
 
 - `--telegram` で env 不足時は Telegram 送信をスキップし、警告を出します
+- Telegram が届かない場合は `<cwd>/.codex-log/telegram-errors/` の診断ログを確認してください
 - 機密値（Token / Chat ID）はコミットしないでください
 
 ## References
