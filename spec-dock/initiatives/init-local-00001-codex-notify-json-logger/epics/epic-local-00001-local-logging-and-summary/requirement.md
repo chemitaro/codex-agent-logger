@@ -115,14 +115,16 @@ Handler -> Summary: rebuild (tmp -> atomic replace)
 
 ## 未確定事項（TBD） (必須)
 - Q-001:
-  - 質問: TBD ...
+  - 質問: ファイル名の safe id 形式はどれを採るか？
   - 選択肢:
-    - A: ...
-    - B: ...
+    - A: `sha256(id)[:8]` のみ（安全/短いが可読性低い）
+    - B: slug + hash（可読性はあるが実装が少し増える）
   - 推奨案（暫定）:
-    - ...
+    - A
   - 影響範囲:
-    - E-RQ / E-AC / スコープ / NFR / 依存 / ...
+    - E-RQ / E-AC / テスト / 運用（ファイル名）
+  - 関連ADR:
+    - `../../adrs/adr-00003-filename-safe-id-format.md`
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] Initiative との紐づき（Goal/Metric）が明記されている

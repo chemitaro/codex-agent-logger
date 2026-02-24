@@ -204,6 +204,8 @@ folder "<cwd>/.codex-log" {
     - A: まずは保存/集約/配信を最短で固め、token は後続で別ADRに分離して判断する
   - 影響範囲:
     - 要件（表示項目）、実装難易度、テスト観点
+  - 関連ADR:
+    - `adrs/adr-00009-token-usage-logging.md`
 - Q-002:
   - 質問: Telegram topic 名の命名規則（人間が探しやすい名前）をどうするか？
   - 選択肢:
@@ -214,6 +216,8 @@ folder "<cwd>/.codex-log" {
     - B: repo 名 + thread-id（repo が無い場合は cwd basename）
   - 影響範囲:
     - Telegram 側の運用性
+  - 関連ADR:
+    - `adrs/adr-00002-telegram-topic-naming.md`
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] 目的（Primary/Secondary）が明記されている

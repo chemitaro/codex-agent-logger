@@ -74,14 +74,18 @@ I1
 
 ## 未確定事項（TBD） (必須)
 - Q-001:
-  - 質問: TBD ...
+  - 質問: Telegram の UI 振る舞い（topic 名/連番/exit code）を先に確定するか？
   - 選択肢:
-    - A: ...
-    - B: ...
+    - A: 実装を先に進め、後から調整する
+    - B: ADR を先に確定し、仕様を固定してから実装する
   - 推奨案（暫定）:
-    - ...
+    - B
   - 影響範囲:
-    - Issue分割 / 順序 / ロールアウト / 品質ゲート / ...
+    - Issue分割 / 順序 / 品質ゲート / 運用
+  - 関連ADR:
+    - `../../adrs/adr-00002-telegram-topic-naming.md`
+    - `../../adrs/adr-00007-telegram-chunk-numbering.md`
+    - `../../adrs/adr-00008-telegram-failure-exit-codes.md`
 
 ## 省略/例外メモ (必須)
 - 該当なし
