@@ -68,6 +68,7 @@ end
   - topic 名は `<cwd_basename> (<thread-id>)`（長さ短縮は `adr-00002`）。
   - 4096 超過時は改行優先で分割し、各 chunk に `(i/n)\\n` を付与する（`adr-00007`）。
   - `.env` は `<cwd>/.env` を自動読込（存在する場合のみ、環境変数優先: `adr-00005`）。
+    - ここでの `<cwd>` は payload の `cwd` を正とし、欠損時は実行時 cwd を用いる
   - Telegram 失敗は warn + exit 0（ローカル保存成功時。`adr-00008`）。
 - MUST NOT（絶対にやらない／追加しない）:
   - 入力メッセージや token 使用量は Telegram に送らない（最終アウトプットのみ）。
