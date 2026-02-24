@@ -17,6 +17,7 @@ ID: "iss-00011"
 - `<cwd>/.gitignore` は作成/変更しない（利用者リポジトリの汚染を避ける）。
 - payload の `cwd` と実行時 `cwd` が異なる場合も、payload 側のみ `.codex-log/.gitignore` を生成することをテストで保証した。
 - `<cwd>/.codex-log/` が symlink の場合、意図せず外部ファイルを上書きし得るため `.codex-log/.gitignore` の生成/更新をスキップし、warning-only で継続する。
+- `<cwd>/.codex-log/` が symlink の場合、`.codex-log` symlink 自体への `chmod` もスキップし、リンク先ディレクトリ権限を意図せず変更しない。
 
 ## 実装記録（セッションログ） (必須)
 
@@ -143,6 +144,30 @@ uv run --frozen pytest -q
 
 #### コミット
 - 9b8da58 fix(gitignore): symlink時は.gitignore生成をスキップ
+
+---
+
+### 2026-02-24 23:40 - 23:50
+
+#### 対象
+- Step: S03（補強）
+- AC/EC: EC-003
+
+#### 実施内容
+- `.codex-log` が symlink の場合、`.codex-log` symlink への `chmod` をスキップするようにした（リンク先権限の意図しない変更回避）。
+- symlink の `chmod` スキップを検証するテストを追加した。
+- 要件/設計/計画を補足した（EC-003）。
+
+#### 実行コマンド / 結果
+```bash
+uv run --frozen pytest -q
+# 結果: PASS（44 passed / exit code 0）
+```
+
+#### 変更したファイル
+- `src/codex_logger/log_store.py` - symlink への chmod をスキップ
+- `tests/test_log_store.py` - symlink chmod スキップのテストを追加
+- `spec-dock/active/issue/{requirement,design,plan}.md` - EC-003 の補足
 
 ## 遭遇した問題と解決 (任意)
 - 問題: ...

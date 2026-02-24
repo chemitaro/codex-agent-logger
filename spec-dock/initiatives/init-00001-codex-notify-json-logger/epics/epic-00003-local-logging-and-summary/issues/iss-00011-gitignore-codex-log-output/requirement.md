@@ -152,7 +152,9 @@ Logger -> Gitignore: ensure ignore-all\n(inside .codex-log only)
   - 観測点: filesystem
 - EC-003:
   - 条件: `<cwd>/.codex-log/` がシンボリックリンク（symlink）である
-  - 期待: `.codex-log/.gitignore` の生成/更新をスキップし、warning を出して継続する（`<cwd>/.gitignore` を汚染しないため）
+  - 期待:
+    - `.codex-log/.gitignore` の生成/更新をスキップし、warning を出して継続する（`<cwd>/.gitignore` を汚染しないため）
+    - `.codex-log` symlink への `chmod` はスキップする（symlink のリンク先ディレクトリ権限を意図せず変更しないため）
   - 観測点: filesystem / stderr
 
 ## 用語（ドメイン語彙） (必須)

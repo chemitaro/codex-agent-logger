@@ -120,6 +120,7 @@ S2 --> S3
   - 対象IF: `codex_logger.gitignore.ensure_codex_log_dir_ignored`
   - 対象テスト: `tests/test_log_store.py::test_save_raw_payload_warns_on_codex_log_gitignore_failure_but_saves`
   - 対象テスト: `tests/test_gitignore.py::test_ensure_skips_when_codex_log_dir_is_symlink`
+  - 対象テスト: `tests/test_log_store.py::test_save_raw_payload_skips_chmod_for_symlink_codex_log_dir`
 - 期待する振る舞い:
   - `.codex-log/.gitignore` 更新に失敗しても例外を投げず、warning を出して継続する
 

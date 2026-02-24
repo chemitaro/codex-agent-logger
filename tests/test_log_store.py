@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -292,3 +293,34 @@ def test_save_raw_payload_warns_on_codex_log_gitignore_failure_but_saves(
     stderr = capsys.readouterr().err
     assert "warn:" in stderr
     assert ".codex-log" in stderr or ".gitignore" in stderr
+
+
+def test_save_raw_payload_skips_chmod_for_symlink_codex_log_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    target = tmp_path / "target"
+    workspace.mkdir()
+    target.mkdir()
+
+    codex_log_dir = workspace / ".codex-log"
+    try:
+        codex_log_dir.symlink_to(target, target_is_directory=True)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"symlink not supported: {exc}")
+
+    called: list[Path] = []
+
+    def _chmod(path: os.PathLike[str] | str, _mode: int) -> None:
+        called.append(Path(path))
+
+    monkeypatch.setattr("codex_logger.log_store.os.chmod", _chmod)
+
+    raw_payload = _payload(workspace)
+    meta = parse_best_effort(raw_payload)
+    saved_path = save_raw_payload(
+        raw_payload, meta.cwd, meta.thread_id, meta.turn_id, now_utc=_fixed_now
+    )
+
+    assert saved_path.exists()
+    assert codex_log_dir not in called

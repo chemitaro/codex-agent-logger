@@ -40,6 +40,7 @@ ID: "iss-00011"
   - `.codex-log/.gitignore` は標準内容（ignore-all）を best-effort で書き込む（tmp → replace）。
   - 失敗は warning に留め、例外は握りつぶす（ローカル保存優先）。
   - `.codex-log/` が symlink の場合は、意図せず外部ファイル（例: `<cwd>/.gitignore`）を上書きし得るため、`.codex-log/.gitignore` の生成/更新をスキップして warning-only で継続する。
+  - ディレクトリ/ファイルの `chmod` は best-effort とし、対象パスが symlink の場合は `chmod` をスキップする（symlink のリンク先権限を意図せず変更しない）。
 - `.codex-log/.gitignore` の標準内容:
   - `*`（`.codex-log/` 配下の全ファイル/全ディレクトリを ignore）
 - 採用しない/変更しない（理由）:
@@ -109,6 +110,7 @@ Ensure --> Save: ok / warn only
 - AC-005 → `log_store._resolve_base_cwd` + `gitignore.ensure_codex_log_dir_ignored`（payload の `cwd` を優先）
 - EC-001/EC-002 → `gitignore.ensure_codex_log_dir_ignored`（書けない場合/既存内容の差し替え）
 - EC-003 → `gitignore.ensure_codex_log_dir_ignored`（`.codex-log` が symlink の場合はスキップ）
+- EC-003 → `log_store._try_chmod`（symlink への chmod をスキップ）
 - 非交渉制約 → `log_store.save_raw_payload`（`.codex-log/.gitignore` 失敗で処理を落とさない）
 
 ## テスト戦略（最低限ここまで具体化） (任意)
@@ -124,6 +126,7 @@ Ensure --> Save: ok / warn only
 - EC-001 → `tests/test_log_store.py::test_save_raw_payload_warns_on_codex_log_gitignore_failure_but_saves`
 - EC-002 → `tests/test_gitignore.py::test_ensure_overwrites_nonstandard_codex_log_gitignore`
 - EC-003 → `tests/test_gitignore.py::test_ensure_skips_when_codex_log_dir_is_symlink`
+- EC-003 → `tests/test_log_store.py::test_save_raw_payload_skips_chmod_for_symlink_codex_log_dir`
 - 実行コマンド:
   - `uv run --frozen pytest -q`
 
