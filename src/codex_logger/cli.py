@@ -3,9 +3,8 @@ from __future__ import annotations
 import argparse
 
 from codex_logger import __version__
-from codex_logger import log_store, payload
+from codex_logger import log_store, payload, summary
 from codex_logger.console import error
-
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="codex-logger")
@@ -35,7 +34,7 @@ def main(argv: list[str] | None = None) -> int:
     meta = payload.parse_best_effort(args.payload_json)
 
     try:
-        log_store.save_raw_payload(
+        saved_path = log_store.save_raw_payload(
             args.payload_json,
             payload_cwd=meta.cwd,
             thread_id=meta.thread_id,
@@ -45,9 +44,15 @@ def main(argv: list[str] | None = None) -> int:
         error(f"failed to save raw payload: {exc}")
         return 1
 
+    base_dir = saved_path.parent.parent
+    try:
+        summary.rebuild_summary(base_dir)
+    except Exception as exc:
+        error(f"failed to rebuild summary: {exc}")
+        return 1
+
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

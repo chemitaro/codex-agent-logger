@@ -9,7 +9,6 @@ from codex_logger.ids import event_id
 from codex_logger.log_store import save_raw_payload
 from codex_logger.payload import parse_best_effort
 
-
 def _fixed_now() -> datetime:
     return datetime(2026, 2, 24, 9, 53, 12, 345000, tzinfo=timezone.utc)
 

@@ -42,9 +42,15 @@ def test_normal_run_without_payload_is_usage_error(capsys: pytest.CaptureFixture
 def test_payload_json_with_or_without_telegram(
     argv: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    saved_path = Path("/tmp/workspace/.codex-log/logs/raw-payload.json")
     monkeypatch.setattr(
         "codex_logger.cli.log_store.save_raw_payload",
-        lambda *_args, **_kwargs: Path("/tmp/raw-payload.json"),
+        lambda *_args, **_kwargs: saved_path,
+    )
+    rebuilt: list[Path] = []
+    monkeypatch.setattr(
+        "codex_logger.cli.summary.rebuild_summary",
+        lambda base_dir: rebuilt.append(base_dir),
     )
 
     args = parse_args(argv)
@@ -52,6 +58,7 @@ def test_payload_json_with_or_without_telegram(
     assert args.telegram == ("--telegram" in argv)
 
     assert main(argv) == 0
+    assert rebuilt == [saved_path.parent.parent]
 
 
 @pytest.mark.parametrize(
