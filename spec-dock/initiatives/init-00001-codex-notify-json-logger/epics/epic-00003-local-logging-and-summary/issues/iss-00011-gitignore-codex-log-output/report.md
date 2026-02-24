@@ -13,8 +13,9 @@ ID: "iss-00011"
 # iss-00011 Gitignore codex log output — 実装報告（LOG）
 
 ## 実装サマリー (任意)
-- `codex-logger` 実行時に `<cwd>/.gitignore` へ `.codex-log/` を best-effort で自動追記するようにした（無ければ作成、重複追記しない）。
-- payload の `cwd` と実行時 `cwd` が異なる場合も、payload 側のみ更新されることをテストで保証した。
+- `codex-logger` 実行時に `<cwd>/.codex-log/.gitignore` を best-effort で自動生成し、`.codex-log/` 配下の全ファイル/全ディレクトリを ignore する（`*`）。
+- `<cwd>/.gitignore` は作成/変更しない（利用者リポジトリの汚染を避ける）。
+- payload の `cwd` と実行時 `cwd` が異なる場合も、payload 側のみ `.codex-log/.gitignore` を生成することをテストで保証した。
 
 ## 実装記録（セッションログ） (必須)
 
@@ -82,6 +83,38 @@ uv run --frozen pytest -q
 - `.gitignore` がUTF-8で読めない場合は追記をスキップする（warning のみ）。
 
 ---
+
+### 2026-02-24 23:15 - 23:30
+
+#### 対象
+- Step: S01, S02, S03（方針変更）
+- AC/EC: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006, EC-001, EC-002
+
+#### 実施内容
+- ルート `<cwd>/.gitignore` を更新する方式を廃止し、`.codex-log/.gitignore` を自動生成する方式へ切り替えた。
+- `.codex-log/.gitignore` は `*` のみを書き込み、`.codex-log/` 配下をすべて ignore する。
+- `.codex-log/.gitignore` の更新に失敗してもローカル保存は継続し、warning のみ出す。
+- Issue の要件/設計/計画/README/テストを新方針に合わせて更新した。
+
+#### 実行コマンド / 結果
+```bash
+uv run --frozen pytest -q
+# 結果: PASS（42 passed / exit code 0）
+```
+
+#### 変更したファイル
+- `src/codex_logger/gitignore.py` - `.codex-log/.gitignore` の生成（ignore-all）
+- `src/codex_logger/log_store.py` - raw 保存前後に `.codex-log/.gitignore` を best-effort 生成
+- `tests/test_gitignore.py` - `.codex-log/.gitignore` のユニットテストを更新
+- `tests/test_log_store.py` - ルート `.gitignore` 非作成/非更新、payload cwd 優先、失敗時継続を検証
+- `README.md` - `.codex-log/.gitignore` の自動生成と notify ローカル clone 例を追記
+- `spec-dock/active/issue/{requirement,design,plan}.md` - 要件/設計/計画を方針変更に追随
+
+#### コミット
+- b8d26a4 fix(gitignore): .codex-log内でignoreを完結
+
+#### メモ
+- `.gitignore` をルートで更新する方式は「利用者リポジトリ汚染」の指摘により要件から外れたため、`.codex-log/` 内で完結する方式に変更した。
 
 ## 遭遇した問題と解決 (任意)
 - 問題: ...
