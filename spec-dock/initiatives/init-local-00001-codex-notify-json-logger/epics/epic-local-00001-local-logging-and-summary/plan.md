@@ -23,9 +23,9 @@ ID: "epic-local-00001"
 ## Issue 一覧（順序付き） (必須)
 - iss-xxxx-... (MVP: 1イベント=1ファイルのログ保存):
   - 目的:
-    - notify payload を `.codex-log/` に 1イベント=1ファイルで保存する（raw JSON 同梱）
+    - notify payload を `.codex-log/` に 1イベント=1ファイルで保存する（raw payload をそのまま保存）
   - 成果物（Deliverable）:
-    - `.codex-log/logs/*.md` の生成
+    - `.codex-log/logs/*.json` の生成（raw payload / SSOT）
     - ファイル名の安全化（ID 正規化）
     - 排他的作成 + 衝突時サフィックスで上書き回避
     - 可能な範囲で restrictive な権限（例: dir 0700 / file 0600）
@@ -36,7 +36,7 @@ ID: "epic-local-00001"
     - epic-local-00003（Packaging and CLI）の CLI 土台（pyproject/entrypoint/テスト基盤）
 - iss-xxxx-... (MVP: summary のフル再構築 + 原子置換):
   - 目的:
-    - `.codex-log/summary.md` を `logs/` から時系列に結合して再生成する
+    - `.codex-log/summary.md` を `logs/*.json` から時系列に走査し、JSON→Markdown へ変換して再生成する
   - 成果物（Deliverable）:
     - summary 再構築区間のロック（同時実行でも破綻しない）
     - `summary.md.tmp` → rename の原子置換
@@ -86,15 +86,7 @@ I1 --> I2
 - Typecheck: `<command>`
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: ファイル名の safe id 形式はどれを採るか？（設計の推奨は sha256 短縮）
-  - 選択肢:
-    - A: `sha256(id)[:8]` のみ（安全/短いが可読性低い）
-    - B: slug + hash（可読性はあるが実装が少し増える）
-  - 推奨案（暫定）:
-    - A
-  - 影響範囲:
-    - Issue 実装、テスト、出力ファイル名
+- 該当なし（意思決定済み: `adr-00003-filename-safe-id-format`）
 
 ## 省略/例外メモ (必須)
 - 該当なし

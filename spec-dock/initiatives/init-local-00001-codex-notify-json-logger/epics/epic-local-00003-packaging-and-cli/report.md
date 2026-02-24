@@ -18,10 +18,13 @@ ID: "epic-local-00003"
 - 次のマイルストーン:
   - `pyproject.toml` + console script `codex-logger` の導入（`uvx --from . codex-logger --help`）
 - ブロッカー:
-  - なし（ただし build backend と `.env` 取り扱いは TBD）
+  - なし
 
 ## 決定事項（ADRリンク） (必須)
 - adr-00001-notify-logger-output-and-telegram: 出力/Telegram 方針（Initiative）
+- adr-00004-python-build-backend: build backend（hatchling）
+- adr-00005-dotenv-loading-strategy: `.env` 自動読込（env 優先）
+- adr-00006-uvx-ref-pinning-strategy: uvx ref 固定（tag 基本 + 緊急時 sha）
 
 ## 完了した Issue / PR / Release (必須)
 - なし（未着手）

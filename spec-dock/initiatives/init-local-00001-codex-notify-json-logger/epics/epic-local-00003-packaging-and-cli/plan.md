@@ -39,6 +39,7 @@ ID: "epic-local-00003"
     - `README.md`（uvx 実行例: GitHub / @tag / @sha / local path）
     - `notify` 設定例（Telegram なし/あり）
     - Telegram 環境変数と注意点（機密）
+    - `.env` の自動読込（`<cwd>/.env`、環境変数優先）と `uvx --env-file`（任意）の説明
   - 対応する E-RQ / E-AC:
     - E-RQ-005 /（ドキュメント観測）
   - Depends on:
@@ -95,15 +96,7 @@ I2 --> I3
 - Smoke: `uvx --from . codex-logger --help`
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: バージョン付け（tag/commit固定を前提）をどう運用するか？
-  - 選択肢:
-    - A: tag（`v0.x.y`）を運用し、notify 側は tag を固定
-    - B: commit sha を固定（より再現性は高いが人間が扱いにくい）
-  - 推奨案（暫定）:
-    - A（tag を基本、緊急時のみ sha）
-  - 影響範囲:
-    - README、運用手順
+- 該当なし（意思決定済み: `../../adrs/adr-00006-uvx-ref-pinning-strategy.md`）
 
 ## 省略/例外メモ (必須)
 - 該当なし

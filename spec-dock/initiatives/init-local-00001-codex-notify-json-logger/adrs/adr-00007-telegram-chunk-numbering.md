@@ -2,7 +2,7 @@
 種別: ADR（Architecture Decision Record）
 ID: "adr-00007"
 タイトル: "Telegram chunk numbering"
-状態: "draft"
+状態: "accepted"
 作成者: "codex-agent"
 最終更新: "2026-02-24"
 親: ["init-local-00001"]
@@ -11,12 +11,9 @@ ID: "adr-00007"
 # adr-00007 Telegram chunk numbering（分割投稿の連番付与）
 
 ## 結論（Decision） (必須)
-- **未決（TBD）**: Telegram の 4096 文字制限で分割投稿する際、各投稿に **連番（例: `(1/3)`）を付けるか**を決める。
-- ステータス運用:
-  - 結論が未決の間は `状態: draft`
-  - 結論が確定したら `accepted`
-- 決定（決定後に記入）:
-  - ...
+- 決定: 分割投稿には **連番を付与する**（Option A）。
+  - 形式: `(<i>/<n>)\\n<chunk>`
+  - 制約: Telegram の 4096 文字制限には **prefix を含めて**収める（例: `max_body_len = 4096 - len(prefix)`）
 
 ## 背景（Context） (必須)
 - 背景/制約（なぜ今決める必要があるか）:
@@ -70,7 +67,7 @@ end note
 - 判断軸:
   - 受信側の可読性
   - 実装の単純さ（prefix 長の考慮が増えるか）
-- 推奨案（暫定）:
+- 結論:
   - Option A（連番付与）
 
 ## 影響（Consequences） (必須)

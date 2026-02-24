@@ -2,7 +2,7 @@
 種別: ADR（Architecture Decision Record）
 ID: "adr-00005"
 タイトル: "Dotenv loading strategy"
-状態: "draft"
+状態: "accepted"
 作成者: "codex-agent"
 最終更新: "2026-02-24"
 親: ["init-local-00001"]
@@ -11,17 +11,16 @@ ID: "adr-00005"
 # adr-00005 Dotenv loading strategy（`.env` の取り扱い）
 
 ## 結論（Decision） (必須)
-- **未決（TBD）**: Telegram の環境変数（例: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`）を `.env` から注入する方式を決める。
-- ステータス運用:
-  - 結論が未決の間は `状態: draft`
-  - 結論が確定したら `accepted`
-- 決定（決定後に記入）:
-  - ...
+- 決定: ツール側で `.env` を **自動読込（存在する場合のみ）**し、無い場合は環境変数をそのまま使う。
+  - `.env` の探索場所: payload の `cwd` 直下（`<cwd>/.env` のみ、上位ディレクトリ探索はしない）
+  - 優先順位: **環境変数（実行時） > `.env`**（`.env` は未設定キーの補完として扱う）
+  - `uvx --env-file` は利用者が明示したい場合の補助として残す（必須にはしない）
 
 ## 背景（Context） (必須)
 - 背景/制約（なぜ今決める必要があるか）:
   - Telegram 連携は環境変数で設定するが、手元運用では `.env` を使いたいケースが多い。
   - どの層（uvx / ツール本体）が `.env` を解釈するかで、依存や運用が変わる。
+  - uvx を GitHub 参照で実行する場合でも、実行される作業ディレクトリ（payload の `cwd`）側に `.env` が存在するとは限らないため、**環境変数のみでも成立**する必要がある。
 - 前提:
   - `--telegram` 指定時のみ Telegram を送る（ログ保存は常に行う）。
   - `.env` の自動読込は「便利だが依存が増える」トレードオフがある。
@@ -57,30 +56,31 @@ end
   - Cons:
     - `notify` 設定に `--env-file` を書く必要がある
   - 棄却理由（棄却する場合）:
-    - （未決）
+    - 「毎回 `notify` 設定へ `--env-file` を書く」運用を避けたい（ツール側で補完したい）
 - Option B: ツール側で `.env` を自動読込（python-dotenv を導入）
   - 概要:
-    - `cwd`（payload 由来）で `.env` を探索/読込し、環境変数を補完する
+    - `cwd`（payload 由来）直下の `.env` を探索/読込し、環境変数を補完する（環境変数が優先）
   - Pros:
     - `notify` 設定が簡潔になる（`--env-file` 不要）
   - Cons:
     - 依存追加（python-dotenv）
     - `.env` 探索ルールが増え、意図しない `.env` を読む事故の可能性がある
   - 棄却理由（棄却する場合）:
-    - （未決）
+    - （採用）
 
 ## 判断理由（Rationale） (必須)
 - 判断軸:
   - 依存を増やさずに運用できるか（MVP の簡潔さ）
   - 誤読込の事故を避けられるか（明示性）
-- 推奨案（暫定）:
-  - Option A（uvx `--env-file` 推奨）
+- 結論:
+  - Option B（ツール側で `.env` を自動読込、環境変数優先）
 
 ## 影響（Consequences） (必須)
 - Positive（良い点）:
-  - Option A はツール側が軽量で、責務が明確（env は起動側が注入）
+  - `notify` 設定が簡潔になる（`--env-file` が必須ではない）
+  - `.env` が無い環境でも環境変数だけで動作する
 - Negative / Debt（悪い点 / 将来負債）:
-  - Option A は `notify` 設定に記述が増える
+  - 依存追加（python-dotenv）と `.env` 読み取り規則が増える（ただし探索は `<cwd>/.env` のみに限定）
 - 影響範囲（コード/テスト/運用/データ）:
   - `epic-local-00003` の README（実行例）
   - `epic-local-00002` の env 不足時 warn（何が不足か）

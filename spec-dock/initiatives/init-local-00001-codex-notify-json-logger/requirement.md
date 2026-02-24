@@ -13,8 +13,8 @@ ID: "init-local-00001"
 ## 目的（Outcome / To-Be） (必須)
 - Primary（必達）:
   - Codex CLI の `notify` で受け取る JSON payload を、OS 通知ではなく **ファイルとして永続化**できる。
-  - `<cwd>/.codex-log/logs/` に「1イベント=1ファイル」の Markdown を保存できる。
-  - `<cwd>/.codex-log/summary.md` に、個別ログを時系列に結合した **読みやすい 1 枚の Markdown** を毎回フレッシュ生成できる。
+  - `<cwd>/.codex-log/logs/` に「1イベント=1ファイル」の **JSON（raw payload）** を保存できる。
+  - `<cwd>/.codex-log/summary.md` に、個別ログ（JSON）を都度解析して Markdown に変換した **読みやすい 1 枚の Markdown** を毎回フレッシュ生成できる。
   - Telegram へは `last-assistant-message`（最終アウトプット）のみを、セッション（`thread-id`）単位の topic に送信できる。
 - Secondary（できれば達成）:
   - （将来）token 使用量を扱う場合に備え、raw JSON を SSOT として保存しておく（MVP では token 取得はしない）。
@@ -44,14 +44,14 @@ hide footbox
 
 actor "Codex CLI" as Codex
 participant "notify handler\n(uvx / local)" as Handler
-database ".codex-log/logs/*.md" as Logs
+database ".codex-log/logs/*.json" as Logs
 database ".codex-log/summary.md" as Summary
 database ".codex-log/telegram-topics.json" as Map
 participant "Telegram\n(optional)" as TG
 
 Codex -> Handler: exec notify command\n(+ JSON payload as arg)
-Handler -> Logs: write 1-event = 1-file (Markdown)\n(+ raw JSON)
-Handler -> Summary: rebuild from logs\n(tmp -> atomic replace)
+Handler -> Logs: write 1-event = 1-file (JSON)\n(raw payload)
+Handler -> Summary: rebuild from *.json\n(parse -> Markdown)\n(tmp -> atomic replace)
 
 alt --telegram flag present
   Handler -> Map: read/update mapping\n(lock + atomic replace)
@@ -79,9 +79,9 @@ end
   - ログ保存のルートは `<cwd>/.codex-log/` とし、`.codex` は汚染しない。
   - 個別ログを `logs/` に保存し、`summary.md` は受信のたびに **フル再構築**して出力する。
     - 出力は `summary.md.tmp` を生成してから原子的に置換する（失敗時は旧 `summary.md` を保持する）。
-  - ファイル名は日時プレフィックス + `thread-id` + `turn-id` に基づき、日時順ソートと衝突回避ができる。
-    - ただし `thread-id`/`turn-id` を **生でファイル名へ埋め込まない**（危険文字/長さ/パストラバーサル対策）。ファイル名は正規化（sanitize/短縮/ハッシュ等）した値を使い、生値は Markdown 本文と raw JSON に残す。
-    - 同名ファイルが発生しても上書きしない（排他的作成 + サフィックス等で必ず別名保存する）。
+  - ファイル名は日時プレフィックス + `thread-id`/`turn-id` に基づく `event-id`（短縮ハッシュ）で、日時順ソートと衝突回避ができる。
+    - `thread-id`/`turn-id` を **生でファイル名へ埋め込まない**（危険文字/長さ/パストラバーサル対策）。safe id（`event-id`）を使い、生値は raw JSON（`.json`）に残す。
+    - suffix の数字は **衝突時のみ**付与する（通常は suffix 無し）。同名ファイルが発生しても上書きしない（排他的作成 + サフィックスで必ず別名保存する）。
   - Telegram 送信は `last-assistant-message` のみ（入力/トークン等は送らない）。
   - Telegram 送信はフラグ `--telegram` 指定時のみ行う（フラグ無しなら送信しない）。
   - ツールは uvx で実行できる（GitHub リポジトリ指定/ローカルパス指定に対応し、必要に応じてタグ/コミットを指定できる）。
@@ -99,18 +99,18 @@ end
 ### ツリー（概形）
 ```text
 <cwd>/
-└── .codex-log/                                (dir)
-    ├── logs/                                 (dir)  # ファイル数 = notify 受信回数
-    │   ├── <ts>_<thread>_<turn>.md            (file) x N
-    │   └── ...
-    ├── summary.md                             (file) # 常に 1（再生成される派生物）
-    ├── summary.md.tmp                         (file) # 一時ファイル（原子置換用）
-    ├── telegram-topics.json                   (file) # 0..1（`--telegram` 運用時）
-    └── telegram-topics.json.tmp               (file) # 一時ファイル（原子置換用）
+    └── .codex-log/                                (dir)
+        ├── logs/                                 (dir)  # ファイル数 = notify 受信回数
+        │   ├── <ts>_<event-id>.json               (file) x N  # 衝突時のみ suffix: __01, __02...
+        │   └── ...
+        ├── summary.md                             (file) # 常に 1（再生成される派生物）
+        ├── summary.md.tmp                         (file) # 一時ファイル（原子置換用）
+        ├── telegram-topics.json                   (file) # 0..1（`--telegram` 運用時）
+        └── telegram-topics.json.tmp               (file) # 一時ファイル（原子置換用）
 ```
 
 ### ファイル構成数（目安）
-- `.codex-log/logs/*.md`: N（1イベント=1）
+- `.codex-log/logs/*.json`: N（1イベント=1）
 - `.codex-log/summary.md`: 1
 - `.codex-log/telegram-topics.json`: 0..1（Telegram を使う場合のみ）
 
@@ -121,7 +121,7 @@ skinparam monochrome true
 
 folder "<cwd>/.codex-log" {
   folder "logs/ (N files)" {
-    file "<ts>_<thread>_<turn>.md"
+    file "<ts>_<event-id>.json"
   }
   file "summary.md"
   file "summary.md.tmp"
@@ -141,7 +141,7 @@ folder "<cwd>/.codex-log" {
   - ログは入力を含む可能性があるため、取り扱い注意（共有先は最終アウトプットのみに制限）。
   - `.codex-log/` 配下は機密を含み得るため、可能な範囲で restrictive な権限（例: dir 0700 / file 0600）で作成する。
 - 運用性:
-  - 設定は環境変数（`.env`）で注入できるようにする（例: Telegram トークン/チャットID）。
+  - 設定は環境変数で注入する。加えて `.env` があれば自動読込できる（環境変数が優先）。
 
 ## 境界（Always / Ask / Never） (必須)
 - Always（常に守る）:
@@ -194,30 +194,9 @@ folder "<cwd>/.codex-log" {
 - R-002: Telegram topics の運用前提（影響: 送信不可 / 対応: Bot 権限・forum 有効化を前提化、無効時はローカル保存のみ）
 
 ## 未確定事項（TBD / 要確認） (必須)
-- Q-001:
-  - 質問: token 使用量をログに含めたいか？（現行の `notify` payload は token 情報を含まない）
-  - 選択肢:
-    - A: MVP では不要（raw JSON + 最終アウトプットの運用で十分）
-    - B: 受信側で tokenizer により推定（モデル名/バージョンに依存）
-    - C: OTel イベント等の別経路から取得して紐づけ（仕組みが別になる）
-  - 推奨案（暫定）:
-    - A: まずは保存/集約/配信を最短で固め、token は後続で別ADRに分離して判断する
-  - 影響範囲:
-    - 要件（表示項目）、実装難易度、テスト観点
-  - 関連ADR:
-    - `adrs/adr-00009-token-usage-logging.md`
-- Q-002:
-  - 質問: Telegram topic 名の命名規則（人間が探しやすい名前）をどうするか？
-  - 選択肢:
-    - A: `Codex <thread-id>`（機械的・一意）
-    - B: `<repo名> <thread-id>`（見やすい）
-    - C: `<cwd basename> <thread-id>`（見やすい）
-  - 推奨案（暫定）:
-    - B: repo 名 + thread-id（repo が無い場合は cwd basename）
-  - 影響範囲:
-    - Telegram 側の運用性
-  - 関連ADR:
-    - `adrs/adr-00002-telegram-topic-naming.md`
+- 該当なし（意思決定済み）
+  - token 使用量: `adrs/adr-00009-token-usage-logging.md`（MVPでは扱わない）
+  - topic 命名: `adrs/adr-00002-telegram-topic-naming.md`（`<cwd_basename> (<thread-id>)`）
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] 目的（Primary/Secondary）が明記されている

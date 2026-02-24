@@ -26,9 +26,10 @@ ID: "epic-local-00002"
     - `thread-id` 単位で topic を作成/再利用し、`last-assistant-message` を送信する
   - 成果物（Deliverable）:
     - `telegram-topics.json` の mapping 保存（ロック＋原子的置換）
-    - 4096 超過時の分割送信（改行優先＋強制分割フォールバック）
+    - 4096 超過時の分割送信（改行優先＋強制分割フォールバック + 連番 `(i/n)`）
     - `--telegram` 指定時のみ送信する（フラグ無しは送信しない）
     - `--telegram` 指定時に env 不足なら warn を出して送信しない
+    - Telegram 送信失敗は warn（exit code はローカル保存の成否に従う）
   - 対応する E-RQ / E-AC:
     - E-RQ-001..006 / E-AC-001..004
   - Depends on:
@@ -73,19 +74,10 @@ I1
 - Typecheck: `<command>`
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: Telegram の UI 振る舞い（topic 名/連番/exit code）を先に確定するか？
-  - 選択肢:
-    - A: 実装を先に進め、後から調整する
-    - B: ADR を先に確定し、仕様を固定してから実装する
-  - 推奨案（暫定）:
-    - B
-  - 影響範囲:
-    - Issue分割 / 順序 / 品質ゲート / 運用
-  - 関連ADR:
-    - `../../adrs/adr-00002-telegram-topic-naming.md`
-    - `../../adrs/adr-00007-telegram-chunk-numbering.md`
-    - `../../adrs/adr-00008-telegram-failure-exit-codes.md`
+- 該当なし（意思決定済み）
+  - topic 命名: `../../adrs/adr-00002-telegram-topic-naming.md`
+  - 分割連番: `../../adrs/adr-00007-telegram-chunk-numbering.md`
+  - exit code: `../../adrs/adr-00008-telegram-failure-exit-codes.md`
 
 ## 省略/例外メモ (必須)
 - 該当なし

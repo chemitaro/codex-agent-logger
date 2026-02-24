@@ -2,7 +2,7 @@
 種別: ADR（Architecture Decision Record）
 ID: "adr-00008"
 タイトル: "Telegram failure exit codes"
-状態: "draft"
+状態: "accepted"
 作成者: "codex-agent"
 最終更新: "2026-02-24"
 親: ["init-local-00001"]
@@ -11,12 +11,8 @@ ID: "adr-00008"
 # adr-00008 Telegram failure exit codes（Telegram 失敗時の exit code）
 
 ## 結論（Decision） (必須)
-- **未決（TBD）**: `--telegram` 指定時に Telegram 送信が失敗した場合の exit code 方針を決める。
-- ステータス運用:
-  - 結論が未決の間は `状態: draft`
-  - 結論が確定したら `accepted`
-- 決定（決定後に記入）:
-  - ...
+- 決定: Telegram 送信失敗は **warn + exit 0**（Option A）とする（ローカル保存優先）。
+  - ただしローカル保存（個別ログ/summary）に失敗した場合は Telegram の成否に関わらず **非0** とする。
 
 ## 背景（Context） (必須)
 - 背景/制約（なぜ今決める必要があるか）:
@@ -74,7 +70,7 @@ stop
   - ローカル必達（最優先）の方針に合うか
   - 外部依存（Telegram）で運用が不安定にならないか
   - 失敗検知のしやすさ（stderr 監視 vs exit code）
-- 推奨案（暫定）:
+- 結論:
   - Option A（warn + exit 0）
 
 ## 影響（Consequences） (必須)
