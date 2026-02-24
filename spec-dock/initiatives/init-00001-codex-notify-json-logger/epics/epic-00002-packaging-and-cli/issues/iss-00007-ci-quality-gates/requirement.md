@@ -86,17 +86,22 @@ Dev --> CI : push / pull_request
 ## 受け入れ条件（観測可能な振る舞い） (必須)
 - AC-001:
   - Actor/Role: 開発者
-  - Given: PR を作成する
-  - When: GitHub Actions が走る
-  - Then: `uv run pytest -q` が実行され、成功/失敗が可視化される
+  - Given: push または pull_request が発生する
+  - When: GitHub Actions workflow（CI）が走る
+  - Then: `uv run --frozen pytest -q` が実行され、成功/失敗が可視化される
   - 観測点: Actions の job logs / status
 - AC-002:
-  - Actor/Role: ...
-  - Given: ...
-  - When: ...
-  - Then: ...
-  - 観測点（UI/HTTP/DB/Log など）: ...
-  - 権限/認可条件（ある場合）: ...
+  - Actor/Role: 開発者
+  - Given: push または pull_request が発生する
+  - When: GitHub Actions workflow（CI）が走る
+  - Then: `uvx --from . codex-logger --help` が実行され exit code 0 で成功する
+  - 観測点: Actions の job logs / status
+- AC-003:
+  - Actor/Role: 開発者
+  - Given: Telegram 関連の環境変数が未設定である（`TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` など）
+  - When: GitHub Actions workflow（CI）が走る
+  - Then: secrets 未設定が原因で job が失敗しない（Telegram を必須化しない）
+  - 観測点: Actions の job logs / status
 
 ### 入力→出力例 (任意)
 - EX-001:
@@ -108,13 +113,13 @@ Dev --> CI : push / pull_request
 
 ## 例外・エッジケース（仕様として固定） (必須)
 - EC-001:
-  - 条件: ...
-  - 期待: ...（例: HTTP 4xx/5xx, エラーコード, 表示文言, ログ, DB状態）
-  - 観測点（UI/HTTP/DB/Log など）: ...
+  - 条件: `uv run --frozen pytest -q` が失敗する（テスト失敗）
+  - 期待: workflow が失敗として扱われ、PR/push の checks が赤になる
+  - 観測点: Actions の job logs / status
 - EC-002:
-  - 条件: ...
-  - 期待: ...
-  - 観測点: ...
+  - 条件: `uvx --from . codex-logger --help` が失敗する（exit code != 0）
+  - 期待: workflow が失敗として扱われ、PR/push の checks が赤になる
+  - 観測点: Actions の job logs / status
 
 ## 用語（ドメイン語彙） (必須)
 - TERM-001: CI = GitHub Actions による自動テスト実行

@@ -13,9 +13,9 @@ ID: "iss-00007"
 # iss-00007 CI Quality Gates — 実装計画（TDD: Red → Green → Refactor）
 
 ## この計画で満たす要件ID (必須)
-- 対象AC: AC-001
-- 対象EC: （該当なし）
-- 対象制約: 機密不要で CI が通る
+- 対象AC: AC-001, AC-002, AC-003
+- 対象EC: EC-001, EC-002
+- 対象制約: Telegram secrets 不要で CI が通る（env 未設定でも成功する）
 
 ## ステップ一覧（観測可能な振る舞い） (必須)
 - [ ] S01: GitHub Actions で pytest が実行される
@@ -30,7 +30,10 @@ ID: "iss-00007"
 
 ### 要件 ↔ ステップ対応表 (必須)
 - AC-001 → S01
-- AC-001 → S02
+- AC-002 → S02
+- AC-003 → S01, S02
+- EC-001 → S01
+- EC-002 → S02
 
 ---
 
@@ -50,7 +53,7 @@ ID: "iss-00007"
   - （Red）失敗するテストの追加/修正
   - （Green）最小実装
   - （Refactor）整理
-  - （品質ゲート）format/lint/test
+  - （品質ゲート）`uv run --frozen pytest -q` / `uvx --from . codex-logger --help`
   - （報告）`./spec-dock/active/issue/report.md` 更新
   - （コミット）このステップの区切りでコミット
 

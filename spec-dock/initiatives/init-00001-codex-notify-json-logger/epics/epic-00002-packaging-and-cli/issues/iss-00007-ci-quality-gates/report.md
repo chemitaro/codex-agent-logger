@@ -13,46 +13,39 @@ ID: "iss-00007"
 # iss-00007 CI Quality Gates — 実装報告（LOG）
 
 ## 実装サマリー (任意)
-- [実装した内容の概要を2-3文で記載]
+- GitHub Actions の CI workflow を追加し、`uv run --frozen pytest -q` と `uvx --from . codex-logger --help` を品質ゲートとして実行できるようにした。
+- Telegram 関連の secrets / env は CI で不要のままにし、未設定でも成功する構成を維持した。
 
 ## 実装記録（セッションログ） (必須)
 
-### 2026-02-24 HH:MM - HH:MM
+### 2026-02-24 17:38 - 17:48
 
 #### 対象
-- Step: S01, S02, ...
-- AC/EC: AC-___, EC-___
+- Step: S01, S02
+- AC/EC: AC-001, AC-002, AC-003, EC-001, EC-002
 
 #### 実施内容
-- ...
+- `.github/workflows/ci.yml` を追加し、`pull_request` / `push` で CI を実行するようにした。
+- CI で Python 3.11 と `uv` / `uvx` をセットアップし、pytest と CLI help のスモークを実行する品質ゲートを追加した。
 
 #### 実行コマンド / 結果
 ```bash
-<command>
+uv run --frozen pytest -q
+# 結果: PASS（exit code 0）
 
-<result>
+uvx --from . codex-logger --help
+# 結果: PASS（exit code 0）
 ```
 
 #### 変更したファイル
-- `path/to/file1` - ...
-- `path/to/file2` - ...
+- `.github/workflows/ci.yml` - CI Quality Gates workflow を追加
+- `spec-dock/active/issue/report.md` - iss-00007 の実装ログを追記
 
 #### コミット
-- <hash> <message>
+- <hash> ci(workflows): CI Quality Gates を追加
 
 #### メモ
-- ...
-
----
-
-### 2026-02-24 HH:MM - HH:MM
-
-#### 対象
-- Step: ...
-- AC/EC: ...
-
-#### 実施内容
-- ...
+- `push` はブランチ指定なしのため main を含む push 全体で実行される。
 
 ---
 
