@@ -4,7 +4,7 @@ ID: "iss-00011"
 タイトル: "Gitignore codex log output"
 関連GitHub: ["#11"]
 状態: "draft | approved"
-作成者: "<YOUR_NAME>"
+作成者: "codex-agent"
 最終更新: "2026-02-24"
 依存: ["requirement.md", "design.md"]
 親: ["epic-00003", "init-00001"]
@@ -13,38 +13,50 @@ ID: "iss-00011"
 # iss-00011 Gitignore codex log output — 実装計画（TDD: Red → Green → Refactor）
 
 ## この計画で満たす要件ID (必須)
-- 対象AC: AC-001, AC-002, ...
-- 対象EC: EC-001, ...
-- 対象制約（該当があれば）: ...
+- 対象AC: AC-001, AC-002, AC-003, AC-004, AC-005
+- 対象EC: EC-001, EC-002
+- 対象制約: 依存追加なし / ローカル保存は必達（`.gitignore` 失敗で exit non-zero にしない）
 
 ## ステップ一覧（観測可能な振る舞い） (必須)
-- [ ] S01: ...
-- [ ] Sxx: ... (任意: 必要に応じて追加)
+- [ ] S01: `.gitignore` が無い/未設定でも `.codex-log/` が追記される
+- [ ] S02: `.codex-log/` が既に無視されている場合は no-op（重複しない）
+- [ ] S03: `.gitignore` 更新失敗は warning のみでログ保存を継続する
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+
+rectangle "S01\ncreate/append" as S1
+rectangle "S02\nidempotent" as S2
+rectangle "S03\nwarn-only" as S3
+
+S1 --> S2
+S2 --> S3
 @enduml
 ```
 
 ### 要件 ↔ ステップ対応表 (必須)
 - AC-001 → S01
-- AC-___ → Sxx (任意: 必要に応じて追加)
-- EC-___ → Sxx (任意: 必要に応じて追加)
-- （任意）非交渉制約 → Sxx（どのステップで担保/検証するか）
+- AC-002 → S01
+- AC-003 → S02
+- AC-004 → S03
+- AC-005 → S01
+- EC-001 → S01
+- EC-002 → S02
+- 非交渉制約（ローカル保存優先/依存追加なし）→ S03
 
 ---
 
 ## 実装ステップ（各ステップは“観測可能な振る舞い”を1つ） (必須)
 
-### S01 — <観測可能な振る舞い> (必須)
-- 対象: AC-___ / EC-___
+### S01 — `.gitignore` が無い/未設定でも `.codex-log/` が追記される (必須)
+- 対象: AC-001, AC-002, EC-001
 - 設計参照:
-  - 対象IF/API: IF-___ / API-___
-  - 対象テスト: `<test_file_path>::<test_name>`
+  - 対象IF: `codex_logger.gitignore.ensure_codex_log_ignored`
+  - 対象テスト: `tests/test_gitignore.py::test_ensure_creates_gitignore`
 - このステップで「追加しないこと（スコープ固定）」:
-  - ...
+  - `.git/info/exclude` や global gitignore への対応
 
 #### update_plan（着手時に登録） (必須)
 - [ ] `update_plan` に、このステップの作業ステップ（調査/Red/Green/Refactor/品質ゲート/報告/コミット）を登録した
@@ -53,16 +65,16 @@ ID: "iss-00011"
   - （Red）失敗するテストの追加/修正
   - （Green）最小実装
   - （Refactor）整理
-  - （品質ゲート）format/lint/test
+  - （品質ゲート）`uv run --frozen pytest -q`
   - （報告）`./spec-dock/active/issue/report.md` 更新
   - （コミット）このステップの区切りでコミット
 
 #### 期待する振る舞い（テストケース） (必須)
-- Given: ...
-- When: ...
-- Then: ...
-- 観測点（UI/HTTP/DB/Log など）: ...
-- 追加/更新するテスト: `<test_file_path>::<test_name>`
+- Given: `<cwd>/.gitignore` が存在しない、または `.codex-log/` が含まれない
+- When: `.codex-log/` 保存処理が走る
+- Then: `<cwd>/.gitignore` に `.codex-log/` が含まれる（末尾改行も保証する）
+- 観測点: filesystem
+- 追加/更新するテスト: `tests/test_gitignore.py`, `tests/test_log_store.py`
 
 #### Red（失敗するテストを先に書く） (任意)
 - 期待する失敗:
@@ -91,27 +103,28 @@ ID: "iss-00011"
 
 ---
 
-### Sxx — <追加の観測可能な振る舞い> (任意)
-- （上の S01 と同じ構成で記載する。update_plan / 期待する振る舞い / ステップ末尾 は省略しない）
-  ...
+### S02 — `.codex-log/` が既に無視されている場合は no-op（重複しない） (必須)
+- 対象: AC-003, EC-002
+- 設計参照:
+  - 対象IF: `codex_logger.gitignore.ensure_codex_log_ignored`
+  - 対象テスト: `tests/test_gitignore.py::test_ensure_noop_when_present`
+- 期待する振る舞い:
+  - `.gitignore` に同等パターンがある場合、変更しない（重複しない）
+
+---
+
+### S03 — `.gitignore` 更新失敗は warning のみでログ保存を継続する (必須)
+- 対象: AC-004
+- 設計参照:
+  - 対象IF: `codex_logger.gitignore.ensure_codex_log_ignored`
+  - 対象テスト: `tests/test_log_store.py::test_save_raw_payload_warns_on_gitignore_failure_but_saves`
+- 期待する振る舞い:
+  - `.gitignore` 更新に失敗しても例外を投げず、warning を出して継続する
 
 ---
 
 ## 未確定事項（TBD） (必須)
-- Q-001:
-  - 質問: TBD ...
-  - 選択肢:
-    - A: ...
-    - B: ...
-  - 推奨案（暫定）: ...
-  - 影響範囲: S__ / AC-__ / EC-__ / `design.md` / ...
-- Q-002:
-  - 質問: TBD ...
-  - 選択肢:
-    - A: ...
-    - B: ...
-  - 推奨案（暫定）: ...
-  - 影響範囲: ...
+- 該当なし
 
 ## 完了条件（Definition of Done） (必須)
 - 対象AC/ECがすべて満たされ、テストで保証されている
