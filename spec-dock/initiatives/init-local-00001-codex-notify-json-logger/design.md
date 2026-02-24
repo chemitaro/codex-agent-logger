@@ -26,9 +26,9 @@ ID: "init-local-00001"
 
 ## 目指す姿（To-Be） (必須)
 - To-Be 概要（文章でOK。図は必要なら各セクション内の UML 小項目に）:
-  - `notify` handler（ツール）は argv[1] の JSON payload を受け取り、`<cwd>/.codexlog/` へ保存する。
+  - `notify` handler（ツール）は JSON payload を **コマンド引数として**受け取り（追加引数がある場合は末尾に付与されるため、最後の引数を JSON として解釈する）、`<cwd>/.codexlog/` へ保存する。
   - `logs/` に「1イベント=1ファイル」を残し、`summary.md` は毎回フル再構築して **原子的に置換**する（`summary.md.tmp` → rename）。
-  - Telegram は任意で、環境変数が揃って **かつ argv[2] に `--telegram` が指定された場合のみ**、`last-assistant-message` を topic へ送る。
+  - Telegram は任意で、環境変数が揃って **かつフラグ `--telegram` が指定された場合のみ**、`last-assistant-message` を topic へ送る。
 - 境界（モジュール/責務/データ境界の方針）:
   - 入力（payload）: Codex CLI notify JSON（raw を SSOT）
   - 出力（永続）: Markdown ログ（+ raw JSON を同梱）
@@ -37,7 +37,29 @@ ID: "init-local-00001"
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+hide footbox
+
+actor "Codex CLI" as Codex
+participant "uvx\n(ephemeral venv)" as UVX
+participant "notify handler\n(console script)" as Handler
+database ".codexlog/logs/*.md" as Logs
+database ".codexlog/summary.md" as Summary
+database ".codexlog/telegram-topics.json" as Map
+participant "Telegram\n(optional)" as TG
+
+Codex -> UVX: exec: uvx --from git+... codexlog [--telegram] <payload-json>
+UVX -> Handler: run console script
+
+Handler -> Logs: write log.md\n(1 event = 1 file)
+Handler -> Summary: rebuild summary.md\n(tmp -> atomic replace)
+
+alt --telegram flag present
+  Handler -> Map: read/update mapping\n(lock + atomic replace)
+  Handler -> TG: create topic (if missing)\n+ sendMessage (chunked)
+else no flag
+  Handler -> Handler: skip Telegram
+end
 @enduml
 ```
 
@@ -53,7 +75,24 @@ ID: "init-local-00001"
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+
+package "Codex CLI" {
+  [notify] as Notify
+}
+
+package "<cwd>/.codexlog" {
+  [logs/*.md] as LogFiles
+  [summary.md] as Summary
+  [telegram-topics.json] as TopicMap
+}
+
+cloud "Telegram Bot API\n(optional)" as TG
+
+Notify --> LogFiles : write
+Notify --> Summary : rebuild (atomic replace)
+Notify --> TG : send last output\n(only with --telegram)
+Notify --> TopicMap : mapping (optional)
 @enduml
 ```
 
@@ -73,7 +112,7 @@ ID: "init-local-00001"
 
 ## 契約（外部I/F・データ境界） (必須)
 - 外部I/F（API/イベント/ファイル等）:
-  - 入力: argv[1] の JSON 文字列（`notify` payload）
+  - 入力: コマンド引数の末尾に付与される JSON 文字列（`notify` payload）
   - 出力: `<cwd>/.codexlog/logs/*.md`, `<cwd>/.codexlog/summary.md`
   - 外部API（任意）: Telegram Bot API（topic 作成、メッセージ投稿）
 - データ境界（どこが正で、どこまで整合性を要求するか）:
@@ -83,9 +122,64 @@ ID: "init-local-00001"
 ## 移行 / ロールアウト方針（原則） (必須)
 - 段階導入:
   - Phase 1: ローカル保存 + summary 再生成のみ
-  - Phase 2: Telegram topic 作成/送信（環境変数が揃っている場合のみ）
+  - Phase 2: Telegram topic 作成/送信（環境変数が揃っており、かつ `--telegram` 指定時のみ）
 - ロールバック:
   - Telegram を無効化（環境変数未設定）してもローカル保存は継続できる
+
+## ディレクトリ構成（出力: `.codexlog/`） (必須)
+> 仕様は requirement に同じ。ここでは「生成/更新方式」を設計として補足する。
+
+```text
+<cwd>/.codexlog/
+├── logs/                      # 1イベント=1ファイル
+├── summary.md                 # logs/ からフル再構築（派生物）
+├── summary.md.tmp             # 原子置換用
+└── telegram-topics.json       # (optional) topic mapping（lock + 原子置換）
+```
+
+### 更新方式（事故防止）
+- `summary.md`: `summary.md.tmp` に生成 → fsync → rename で原子的に置換（失敗時は旧 summary を維持）
+- `telegram-topics.json`: lock → read-modify-write（tmp + rename）で破損しにくくする
+
+## 配布/実行（uvx） (必須)
+### 目的
+- ローカル clone/インストール無しで、GitHub リポジトリ URL を指定して都度実行できるようにする。
+
+### リポジトリ構成（MVP 想定）
+```text
+repo-root/                               (dir)
+├── pyproject.toml                       (file) x 1
+├── README.md                            (file) x 1
+├── src/                                 (dir)
+│   └── codexlog/                        (dir)  # Python package
+│       ├── __init__.py                  (file) x 1
+│       ├── cli.py                       (file) x 1  # console script entry
+│       ├── notify_payload.py            (file) x 1  # JSON parsing/normalization
+│       ├── storage.py                   (file) x 1  # logs + atomic summary
+│       └── telegram.py                  (file) x 1  # topics + chunking (optional)
+└── tests/                               (dir)  # テスト（件数は Issue 化で確定）
+    └── test_*.py                        (file) x N
+```
+
+### 想定コマンド（例）
+```bash
+# ローカル保存のみ（Telegramは送らない）
+uvx --from git+https://github.com/<owner>/<repo> codexlog '<payload-json>'
+
+# Telegram送信あり（最終アウトプットのみ）
+uvx --from git+https://github.com/<owner>/<repo> codexlog --telegram '<payload-json>'
+```
+
+### Codex CLI `notify` 設定例（概念）
+> `notify = [...]` の末尾に Codex が JSON payload を追加するため、ツールは「最後の引数を JSON」として扱う。
+
+```toml
+# Telegram なし
+notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codexlog"]
+
+# Telegram あり
+notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codexlog", "--telegram"]
+```
 
 ## 観測性（Observability） (必須)
 - ログ（必須キー、マスキング、サンプリング）:
