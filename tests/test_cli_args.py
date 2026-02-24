@@ -1,6 +1,6 @@
 import pytest
 
-from codex_logger.cli import main
+from codex_logger.cli import main, parse_args
 
 
 def test_help_exits_zero() -> None:
@@ -38,4 +38,26 @@ def test_normal_run_without_payload_is_usage_error(capsys: pytest.CaptureFixture
     ],
 )
 def test_payload_json_with_or_without_telegram(argv: list[str]) -> None:
+    args = parse_args(argv)
+    assert args.payload_json == '{"type":"agent-turn-complete"}'
+    assert args.telegram == ("--telegram" in argv)
+
     assert main(argv) == 0
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["--unknown"],
+        ['{"type":"agent-turn-complete"}', "extra"],
+    ],
+)
+def test_unknown_or_extra_args_are_usage_error(
+    argv: list[str], capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        main(argv)
+    assert excinfo.value.code != 0
+
+    stderr = capsys.readouterr().err
+    assert "usage:" in stderr
