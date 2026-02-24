@@ -28,11 +28,12 @@ ID: "iss-00005"
 - `pyproject.toml`（hatchling）と `src/codex_logger/` を追加し、`codex-logger` を起動できる土台を作成
 - `argparse` で `--help/--version/--telegram/payload` の引数契約を固定
 - pytest で引数契約をテストし、`uvx --from . codex-logger --help` のスモークを確認
+- レビューフィードバックを反映し、AC-003/EC-002 の観測点（テスト）を強化
 
 #### 実行コマンド / 結果
 ```bash
 uv run pytest -q
-# => 6 passed
+# => 8 passed
 
 uvx --from . codex-logger --help
 # => exit 0
@@ -48,6 +49,7 @@ uvx --from . codex-logger --help
 #### コミット
 - 694fec1 feat(cli): codex-loggerのpackagingとCLI骨組みを追加
 - 5a1d801 test(cli): CLI引数契約のテストを追加
+- bbed2ea test(cli): 引数契約テストを強化
 
 #### メモ
 - `--help/--version` は `argparse` の `SystemExit` をそのまま利用
