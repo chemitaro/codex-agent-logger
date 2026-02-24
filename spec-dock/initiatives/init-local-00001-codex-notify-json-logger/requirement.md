@@ -13,8 +13,8 @@ ID: "init-local-00001"
 ## 目的（Outcome / To-Be） (必須)
 - Primary（必達）:
   - Codex CLI の `notify` で受け取る JSON payload を、OS 通知ではなく **ファイルとして永続化**できる。
-  - `<cwd>/.codexlog/logs/` に「1イベント=1ファイル」の Markdown を保存できる。
-  - `<cwd>/.codexlog/summary.md` に、個別ログを時系列に結合した **読みやすい 1 枚の Markdown** を毎回フレッシュ生成できる。
+  - `<cwd>/.codex-log/logs/` に「1イベント=1ファイル」の Markdown を保存できる。
+  - `<cwd>/.codex-log/summary.md` に、個別ログを時系列に結合した **読みやすい 1 枚の Markdown** を毎回フレッシュ生成できる。
   - Telegram へは `last-assistant-message`（最終アウトプット）のみを、セッション（`thread-id`）単位の topic に送信できる。
 - Secondary（できれば達成）:
   - （将来）token 使用量を扱う場合に備え、raw JSON を SSOT として保存しておく（MVP では token 取得はしない）。
@@ -29,8 +29,8 @@ ID: "init-local-00001"
 - なぜ今やるか（トリガー/期限/機会損失）:
   - `notify` の payload を「収集→保存→集約→（必要なら）配信」する仕組みがあれば、運用の事故を減らせる。
 - 観測点（どこを見て確認するか）:
-  - `.codexlog/logs/` にログが作られること
-  - `.codexlog/summary.md` が毎回再生成され、時系列に並ぶこと
+  - `.codex-log/logs/` にログが作られること
+  - `.codex-log/summary.md` が毎回再生成され、時系列に並ぶこと
   - Telegram topic がセッション単位で作成/再利用され、最終アウトプットのみが届くこと
 - 情報源（ヒアリング/ログ/コード/ドキュメント等の根拠）:
   - Codex CLI docs: `notify`（JSON はコマンド引数として渡される。追加引数がある場合は末尾になる）
@@ -44,9 +44,9 @@ hide footbox
 
 actor "Codex CLI" as Codex
 participant "notify handler\n(uvx / local)" as Handler
-database ".codexlog/logs/*.md" as Logs
-database ".codexlog/summary.md" as Summary
-database ".codexlog/telegram-topics.json" as Map
+database ".codex-log/logs/*.md" as Logs
+database ".codex-log/summary.md" as Summary
+database ".codex-log/telegram-topics.json" as Map
 participant "Telegram\n(optional)" as TG
 
 Codex -> Handler: exec notify command\n(+ JSON payload as arg)
@@ -66,7 +66,7 @@ end
 - Metric 1:
   - Baseline（現状値）: 0（仕組み無し）
   - Target（目標値）: `agent-turn-complete` 受信のたびに 100% ログ生成（少なくともローカル保存は失敗しない）
-  - 計測方法（どこで/どう測るか）: `.codexlog/logs/` と `.codexlog/summary.md` の生成を確認（E2E テスト + 手動確認）
+  - 計測方法（どこで/どう測るか）: `.codex-log/logs/` と `.codex-log/summary.md` の生成を確認（E2E テスト + 手動確認）
   - 計測期間（いつからいつまでで判断するか）: 実装後の運用初期（例: 1 週間）
 - Metric 2:
   - Baseline（現状値）: 0（仕組み無し）
@@ -76,14 +76,15 @@ end
 
 ## スコープ（暴走防止のガードレール） (必須)
 - MUST:
-  - ログ保存のルートは `<cwd>/.codexlog/` とし、`.codex` は汚染しない。
+  - ログ保存のルートは `<cwd>/.codex-log/` とし、`.codex` は汚染しない。
   - 個別ログを `logs/` に保存し、`summary.md` は受信のたびに **フル再構築**して出力する。
     - 出力は `summary.md.tmp` を生成してから原子的に置換する（失敗時は旧 `summary.md` を保持する）。
   - ファイル名は日時プレフィックス + `thread-id` + `turn-id` に基づき、日時順ソートと衝突回避ができる。
     - ただし `thread-id`/`turn-id` を **生でファイル名へ埋め込まない**（危険文字/長さ/パストラバーサル対策）。ファイル名は正規化（sanitize/短縮/ハッシュ等）した値を使い、生値は Markdown 本文と raw JSON に残す。
   - Telegram 送信は `last-assistant-message` のみ（入力/トークン等は送らない）。
   - Telegram 送信はフラグ `--telegram` 指定時のみ行う（フラグ無しなら送信しない）。
-  - ツールは uvx で実行できる（GitHub リポジトリ URL を `uvx --from ...` で指定して都度実行できる）。
+  - ツールは uvx で実行できる（GitHub リポジトリ指定/ローカルパス指定に対応し、必要に応じてタグ/コミットを指定できる）。
+    - CLI コマンド名は `codex-logger` とする。
 - MUST NOT:
   - OS 通知としてユーザーへポップアップ表示しない（notify の payload は保存/配信に使う）。
   - `.git/` やリポジトリ設定を変更しない（ブランチ操作や破壊的操作をしない）。
@@ -91,13 +92,13 @@ end
   - ログの自動削除/ローテーション（まずは保存と集約を優先）
   - 機密情報の自動マスキング（方針確定後に追加）
 
-## ディレクトリ構成（出力: `.codexlog/`） (必須)
+## ディレクトリ構成（出力: `.codex-log/`） (必須)
 > 可読性と事故防止のため、出力は **2段構成**（個別ログ + フレッシュ生成サマリ）にする。
 
 ### ツリー（概形）
 ```text
 <cwd>/
-└── .codexlog/                                (dir)
+└── .codex-log/                                (dir)
     ├── logs/                                 (dir)  # ファイル数 = notify 受信回数
     │   ├── <ts>_<thread>_<turn>.md            (file) x N
     │   └── ...
@@ -108,16 +109,16 @@ end
 ```
 
 ### ファイル構成数（目安）
-- `.codexlog/logs/*.md`: N（1イベント=1）
-- `.codexlog/summary.md`: 1
-- `.codexlog/telegram-topics.json`: 0..1（Telegram を使う場合のみ）
+- `.codex-log/logs/*.md`: N（1イベント=1）
+- `.codex-log/summary.md`: 1
+- `.codex-log/telegram-topics.json`: 0..1（Telegram を使う場合のみ）
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
 skinparam monochrome true
 
-folder "<cwd>/.codexlog" {
+folder "<cwd>/.codex-log" {
   folder "logs/ (N files)" {
     file "<ts>_<thread>_<turn>.md"
   }
@@ -142,7 +143,7 @@ folder "<cwd>/.codexlog" {
 
 ## 境界（Always / Ask / Never） (必須)
 - Always（常に守る）:
-  - 出力先は `<cwd>/.codexlog/` に閉じる。
+  - 出力先は `<cwd>/.codex-log/` に閉じる。
   - 1イベント=1ファイル + フレッシュ生成の `summary.md` を維持する。
 - Ask（迷ったら相談）:
   - ログ/Telegram に含める内容のマスキング・省略方針（機密/PII）
@@ -158,14 +159,15 @@ folder "<cwd>/.codexlog" {
 - 開発者（担当領域）:
   - Codex CLI 利用者 / 自動化担当
 - 影響範囲（システム/モジュール/外部連携）:
-  - ローカルファイル（`.codexlog/`）
+  - ローカルファイル（`.codex-log/`）
   - Telegram Bot API（任意）
 
 ## 制約・前提（Constraints / Assumptions） (必須)
 - 技術制約:
   - `notify` は JSON をコマンド引数として付与する（追加引数がある場合、JSON は末尾になり得る）。
   - ツールは JSON を **最後の引数**として解釈できるように実装する（`--telegram` 等のフラグと共存させるため）。
-  - ツールは uvx 実行を前提に配布する（GitHub リポジトリから直接実行できる Python パッケージ + console script）。
+  - ツールは uvx 実行を前提に配布する（GitHub リポジトリから直接実行でき、ローカル clone のパス指定でも実行できる Python パッケージ + console script）。
+    - GitHub 指定ではタグ/コミット（例: `@v0.1.0` / `@<sha>`）を指定できる。
 - ビジネス制約:
   - まずは個人/小規模チーム運用を想定（厳密な監査要件は後回し）。
 - 法務/セキュリティ:
@@ -182,6 +184,8 @@ folder "<cwd>/.codexlog" {
 - I-RQ-003: summary（時系列結合）を毎回フレッシュ生成できる
 - I-RQ-004: Telegram に最終アウトプットのみ配信できる（topic をセッション単位で作る）
 - I-RQ-005: uvx で GitHub リポジトリ指定からツールを実行できる
+- I-RQ-006: uvx でローカルパス指定からツールを実行できる
+- I-RQ-007: uvx の GitHub 指定でタグ/コミットを指定できる
 
 ## リスク/依存（Risks / Dependencies） (必須)
 - R-001: ログに機密が混入（影響: 情報漏洩 / 対応: 送信は最終アウトプットのみ + マスキング方針を後続で定義）

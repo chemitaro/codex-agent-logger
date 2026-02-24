@@ -14,7 +14,7 @@ ID: "init-local-00001"
 ## アーキテクチャ上の狙い（Architectural drivers） (必須)
 - 信頼性: ローカル保存を最優先し、外部送信（Telegram）が失敗してもログは残る
 - 変更容易性: notify payload のフィールド追加/変更に耐える（raw JSON を SSOT とする）
-- 運用性: `.codex` を汚さず、`<cwd>/.codexlog/` に閉じた運用にする
+- 運用性: `.codex` を汚さず、`<cwd>/.codex-log/` に閉じた運用にする
 - 安全性: Telegram へは最終アウトプットのみ送る（入力/トークン等は送らない）
 
 ## 現状の把握（As-Is） (必須)
@@ -26,7 +26,7 @@ ID: "init-local-00001"
 
 ## 目指す姿（To-Be） (必須)
 - To-Be 概要（文章でOK。図は必要なら各セクション内の UML 小項目に）:
-  - `notify` handler（ツール）は JSON payload を **コマンド引数として**受け取り（追加引数がある場合は末尾に付与されるため、最後の引数を JSON として解釈する）、`<cwd>/.codexlog/` へ保存する。
+  - `notify` handler（ツール）は JSON payload を **コマンド引数として**受け取り（追加引数がある場合は末尾に付与されるため、最後の引数を JSON として解釈する）、`<cwd>/.codex-log/` へ保存する。
   - `logs/` に「1イベント=1ファイル」を残し、`summary.md` は毎回フル再構築して **原子的に置換**する（`summary.md.tmp` → rename）。
   - Telegram は任意で、環境変数が揃って **かつフラグ `--telegram` が指定された場合のみ**、`last-assistant-message` を topic へ送る。
 - 境界（モジュール/責務/データ境界の方針）:
@@ -43,12 +43,12 @@ hide footbox
 actor "Codex CLI" as Codex
 participant "uvx\n(ephemeral venv)" as UVX
 participant "notify handler\n(console script)" as Handler
-database ".codexlog/logs/*.md" as Logs
-database ".codexlog/summary.md" as Summary
-database ".codexlog/telegram-topics.json" as Map
+database ".codex-log/logs/*.md" as Logs
+database ".codex-log/summary.md" as Summary
+database ".codex-log/telegram-topics.json" as Map
 participant "Telegram\n(optional)" as TG
 
-Codex -> UVX: exec: uvx --from git+... codexlog [--telegram] <payload-json>
+Codex -> UVX: exec: uvx --from git+... codex-logger [--telegram] <payload-json>
 UVX -> Handler: run console script
 
 Handler -> Logs: write log.md\n(1 event = 1 file)
@@ -66,7 +66,7 @@ end
 ## システム境界 / 依存（Context） (必須)
 - 対象範囲（in scope のシステム/モジュール）:
   - notify handler（CLI から呼び出されるスクリプト/バイナリ）
-  - ローカル保存（`.codexlog/`）とサマリ生成
+  - ローカル保存（`.codex-log/`）とサマリ生成
 - 外部依存（他サービス/外部API/チーム）:
   - Telegram Bot API（任意）
 - 互換性の方針（後方互換/段階移行/破壊的変更の扱い）:
@@ -81,7 +81,7 @@ package "Codex CLI" {
   [notify] as Notify
 }
 
-package "<cwd>/.codexlog" {
+package "<cwd>/.codex-log" {
   [logs/*.md] as LogFiles
   [summary.md] as Summary
   [telegram-topics.json] as TopicMap
@@ -101,7 +101,7 @@ Notify --> TopicMap : mapping (optional)
   - notify payload は未知フィールドが増える前提で、パース失敗時も raw を保存する
 - セキュリティ（権限/監査/PII）:
   - Telegram に送るのは `last-assistant-message` のみ（入力/トークン等は送らない）
-  - `.codex` を汚さない（ログは `.codexlog/` のみ）
+  - `.codex` を汚さない（ログは `.codex-log/` のみ）
   - ファイル名へ `thread-id`/`turn-id` を生で埋め込まない（正規化/短縮/ハッシュ等で安全化し、生値は raw JSON に残す）
 - 観測性（ログ/メトリクス/トレース）:
   - 失敗は stderr に出し、exit code で検知できるようにする（ローカル保存の失敗は非許容）
@@ -113,7 +113,7 @@ Notify --> TopicMap : mapping (optional)
 ## 契約（外部I/F・データ境界） (必須)
 - 外部I/F（API/イベント/ファイル等）:
   - 入力: コマンド引数の末尾に付与される JSON 文字列（`notify` payload）
-  - 出力: `<cwd>/.codexlog/logs/*.md`, `<cwd>/.codexlog/summary.md`
+  - 出力: `<cwd>/.codex-log/logs/*.md`, `<cwd>/.codex-log/summary.md`
   - 外部API（任意）: Telegram Bot API（topic 作成、メッセージ投稿）
 - データ境界（どこが正で、どこまで整合性を要求するか）:
   - SSOT: 保存した raw JSON（ログ Markdown 内の JSON ブロック）
@@ -126,11 +126,11 @@ Notify --> TopicMap : mapping (optional)
 - ロールバック:
   - Telegram を無効化（環境変数未設定）してもローカル保存は継続できる
 
-## ディレクトリ構成（出力: `.codexlog/`） (必須)
+## ディレクトリ構成（出力: `.codex-log/`） (必須)
 > 仕様は requirement に同じ。ここでは「生成/更新方式」を設計として補足する。
 
 ```text
-<cwd>/.codexlog/
+<cwd>/.codex-log/
 ├── logs/                      # 1イベント=1ファイル
 ├── summary.md                 # logs/ からフル再構築（派生物）
 ├── summary.md.tmp             # 原子置換用
@@ -151,7 +151,7 @@ repo-root/                               (dir)
 ├── pyproject.toml                       (file) x 1
 ├── README.md                            (file) x 1
 ├── src/                                 (dir)
-│   └── codexlog/                        (dir)  # Python package
+│   └── codex_logger/                    (dir)  # Python package
 │       ├── __init__.py                  (file) x 1
 │       ├── cli.py                       (file) x 1  # console script entry
 │       ├── notify_payload.py            (file) x 1  # JSON parsing/normalization
@@ -164,10 +164,18 @@ repo-root/                               (dir)
 ### 想定コマンド（例）
 ```bash
 # ローカル保存のみ（Telegramは送らない）
-uvx --from git+https://github.com/<owner>/<repo> codexlog '<payload-json>'
+uvx --from git+https://github.com/<owner>/<repo> codex-logger '<payload-json>'
 
 # Telegram送信あり（最終アウトプットのみ）
-uvx --from git+https://github.com/<owner>/<repo> codexlog --telegram '<payload-json>'
+uvx --from git+https://github.com/<owner>/<repo> codex-logger --telegram '<payload-json>'
+
+# GitHub 指定 + タグ/コミット固定（例）
+uvx --from git+https://github.com/<owner>/<repo>@v0.1.0 codex-logger '<payload-json>'
+uvx --from git+https://github.com/<owner>/<repo>@<commit-sha> codex-logger '<payload-json>'
+
+# ローカル clone のパス指定（例）
+uvx --from /path/to/local/clone codex-logger '<payload-json>'
+uvx --from . codex-logger '<payload-json>'  # repo-root で実行する場合
 ```
 
 ### Codex CLI `notify` 設定例（概念）
@@ -175,10 +183,10 @@ uvx --from git+https://github.com/<owner>/<repo> codexlog --telegram '<payload-j
 
 ```toml
 # Telegram なし
-notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codexlog"]
+notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codex-logger"]
 
 # Telegram あり
-notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codexlog", "--telegram"]
+notify = ["uvx", "--from", "git+https://github.com/<owner>/<repo>", "codex-logger", "--telegram"]
 ```
 
 ## 観測性（Observability） (必須)
