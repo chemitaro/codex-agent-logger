@@ -54,7 +54,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.telegram:
         try:
             telegram.send_last_message_best_effort(
-                args.payload_json, base_cwd=base_dir.parent, base_dir=base_dir
+                args.payload_json,
+                base_cwd=base_dir.parent,
+                base_dir=base_dir,
+                event_stem=saved_path.stem,
             )
         except Exception as exc:
             warn(f"telegram delivery failed: {exc.__class__.__name__}")

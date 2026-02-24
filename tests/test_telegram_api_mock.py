@@ -64,7 +64,9 @@ def test_create_topic_and_send_updates_mapping(tmp_path: Path, monkeypatch: pyte
 
     monkeypatch.setattr("codex_logger.telegram.urllib.request.urlopen", _urlopen)
 
-    send_last_message_best_effort(raw_payload, base_cwd=base_cwd, base_dir=base_dir)
+    send_last_message_best_effort(
+        raw_payload, base_cwd=base_cwd, base_dir=base_dir, event_stem="event-1"
+    )
 
     mapping_path = base_dir / "telegram-topics.json"
     mapping = json.loads(mapping_path.read_text(encoding="utf-8"))
@@ -111,5 +113,7 @@ def test_mapping_reuses_existing_topic(tmp_path: Path, monkeypatch: pytest.Monke
 
     monkeypatch.setattr("codex_logger.telegram.urllib.request.urlopen", _urlopen)
 
-    send_last_message_best_effort(raw_payload, base_cwd=base_cwd, base_dir=base_dir)
+    send_last_message_best_effort(
+        raw_payload, base_cwd=base_cwd, base_dir=base_dir, event_stem="event-1"
+    )
     assert len(calls) == 1
