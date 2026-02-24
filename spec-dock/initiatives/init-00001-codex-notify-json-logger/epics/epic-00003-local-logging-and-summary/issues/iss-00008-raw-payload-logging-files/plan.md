@@ -14,7 +14,7 @@ ID: "iss-00008"
 
 ## この計画で満たす要件ID (必須)
 - 対象AC: AC-001, AC-002, AC-003
-- 対象EC: EC-001, EC-002
+- 対象EC: EC-001, EC-002, EC-003
 - 対象制約:
   - raw payload は改変しない
   - event-id 方式（`adr-00003`）
@@ -110,6 +110,10 @@ S2 --> S3
   - 対象テスト: `tests/test_log_store.py::test_save_raw_payload_creates_file`
 - 期待する振る舞い:
   - `.codex-log/logs/<ts>_<event-id>.json` が作られ、内容が raw と一致する
+  - 同名衝突時は `O_EXCL` 相当で上書きを避け、`__01`, `__02`... を付与した新規ファイルとして保存できる（EC-003）
+- 追加/更新するテスト:
+  - `tests/test_log_store.py::test_save_raw_payload_creates_file`
+  - `tests/test_log_store.py::test_save_raw_payload_collision_adds_suffix`
 
 ### S03 — 欠損/不正 JSON でも warn + 保存継続できる (必須)
 - 対象: EC-001, EC-002
@@ -118,6 +122,8 @@ S2 --> S3
   - 対象テスト:
     - `tests/test_log_store.py::test_missing_fields_warns_and_saves`
     - `tests/test_log_store.py::test_invalid_json_warns_and_saves`
+    - `tests/test_log_store.py::test_chmod_failure_warns_but_saves`
+    - `tests/test_cli_exit_codes.py::test_cli_nonzero_when_raw_save_fails`
 
 ---
 

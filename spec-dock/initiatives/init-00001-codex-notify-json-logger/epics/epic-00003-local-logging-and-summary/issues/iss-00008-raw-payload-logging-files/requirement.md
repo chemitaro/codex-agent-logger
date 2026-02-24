@@ -67,7 +67,7 @@ Handler -> Logs: create file\n(write raw payload)
   - `.codex-log` ディレクトリ名（ハイフン含む）を固定する
   - SSOT は raw JSON（`logs/*.json`）
 - Ask（迷ったら相談）:
-  - permissions が設定できない環境の扱い（best-effort で良いか）
+  - 該当なし（permissions は `adr-00008` に従い best-effort で確定）
 - Never（絶対にしない）:
   - `.codex/` 配下の設定変更
 
@@ -127,6 +127,10 @@ Handler -> Logs: create file\n(write raw payload)
   - 条件: payload が不正 JSON
   - 期待: warn を出しつつ raw 保存は継続する（cwd は実行時 cwd を fallback、event-id はセンチネル値で生成: `adr-00003`）
   - 観測点: stderr / FS
+- EC-003:
+  - 条件: `<ts>_<event-id>.json` が既に存在する（同時実行/同一時刻/再実行など）
+  - 期待: **上書きせず** 排他的作成（`O_EXCL` 相当）で衝突を検知し、`__01`, `__02`... を付与した新規ファイルとして保存する（`adr-00003`）
+  - 観測点: FS / 既存ファイル内容が不変であること
 
 ## 用語（ドメイン語彙） (必須)
 - TERM-001: SSOT = 正のデータ源（raw JSON の個別ログ）

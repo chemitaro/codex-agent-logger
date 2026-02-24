@@ -100,7 +100,9 @@ S -> Logs: open(O_EXCL)\nwrite raw bytes
 - IF-LOG-001: `codex_logger.log_store::save_raw_payload(raw: str, payload_cwd: str | None, thread_id: str | None, turn_id: str | None, now_utc: Callable[[], datetime] | None = None) -> Path`
   - Input: raw JSON 文字列 + 必要最小のメタ（best effort）
   - Output: 作成したログファイルのパス
-  - Errors: 書き込み不可/権限不可などは例外（この Issue では exit non-zero に繋げる）
+  - Errors:
+    - ディレクトリ作成/ファイル作成/書き込みに失敗した場合は例外（CLI は非0終了につなげる）
+    - permissions（dir/file の chmod 等）の設定に失敗した場合は **warn + 継続**（raw 保存が成功していれば exit code には影響させない: `adr-00008`）
 - IF-ID-001: `codex_logger.ids::event_id(thread_id: str | None, turn_id: str | None) -> str`
   - Input: thread/turn（欠損可）
   - Output: `ev-<sha[:12]>`
@@ -167,6 +169,7 @@ S -> Logs: open(O_EXCL)\nwrite raw bytes
 - AC-002 → `ids.event_id` + `timefmt.ts_utc_ms`（テスト）
 - AC-003 → `log_store.ensure_dirs`（テスト）
 - EC-001/EC-002 → `payload.parse_best_effort`（warn + fallback）
+- EC-003 → `log_store.save_raw_payload`（排他作成 + suffix）+ `tests/test_log_store.py::test_save_raw_payload_collision_adds_suffix`
 - 非交渉制約（raw保持）→ `log_store` は raw 文字列を書き込む（parse→dump禁止）
 
 ## テスト戦略（最低限ここまで具体化） (任意)
@@ -179,8 +182,10 @@ S -> Logs: open(O_EXCL)\nwrite raw bytes
 - どのAC/ECをどのテストで保証するか:
   - AC-001 → `tests/test_log_store.py::test_save_raw_payload_creates_file`
   - AC-002 → `tests/test_log_store.py::test_event_id_and_filename_pattern`
+  - AC-003 → `tests/test_log_store.py::test_save_raw_payload_creates_dirs`
   - EC-001 → `tests/test_log_store.py::test_missing_fields_warns_and_saves`
   - EC-002 → `tests/test_log_store.py::test_invalid_json_warns_and_saves`
+  - EC-003 → `tests/test_log_store.py::test_save_raw_payload_collision_adds_suffix`
 
 ### テストマトリクス（AC/EC → テスト） (任意)
 - AC-001:
