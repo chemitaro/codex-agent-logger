@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 from codex_logger.console import warn
+from codex_logger.gitignore import ensure_codex_log_ignored
 from codex_logger.ids import event_id
 from codex_logger.timefmt import ts_utc_ms
 
@@ -27,6 +28,8 @@ def save_raw_payload(
 
     _ensure_directory(codex_log_dir)
     _ensure_directory(logs_dir)
+
+    ensure_codex_log_ignored(base_cwd)
 
     current_utc = now_utc() if now_utc is not None else datetime.now(timezone.utc)
     timestamp = ts_utc_ms(current_utc)
@@ -87,4 +90,3 @@ def _write_payload_file(logs_dir: Path, stem: str, payload_bytes: bytes) -> Path
         return candidate
 
     raise FileExistsError(f"too many collisions for {stem}.json")
-
