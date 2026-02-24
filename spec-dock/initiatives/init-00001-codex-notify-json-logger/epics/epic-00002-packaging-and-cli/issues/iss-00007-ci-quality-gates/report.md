@@ -31,7 +31,7 @@ ID: "iss-00007"
 #### 実行コマンド / 結果
 ```bash
 uv run --frozen pytest -q
-# 結果: PASS（exit code 0）
+# 結果: PASS（34 passed / exit code 0）
 
 uvx --from . codex-logger --help
 # 結果: PASS（exit code 0）
@@ -42,7 +42,7 @@ uvx --from . codex-logger --help
 - `spec-dock/active/issue/report.md` - iss-00007 の実装ログを追記
 
 #### コミット
-- <hash> ci(workflows): CI Quality Gates を追加
+- db18469 ci(workflows): CI品質ゲートを追加
 
 #### メモ
 - `push` はブランチ指定なしのため main を含む push 全体で実行される。
