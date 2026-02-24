@@ -70,17 +70,7 @@ UVX -> CLI: run
 ```
 
 ## データ・バリデーション（必要最小限） (任意)
-- MODEL-001: <Entity/DTO/Table名>
-  - Fields: ...
-  - Constraints/Validation: ...
-- ...
-
-### UML（任意） (任意)
-```plantuml
-@startuml
-' TODO: 必要なら UML を追加する（形式は自由）
-@enduml
-```
+- 該当なし（ドキュメントのみ）
 
 ## 判断材料/トレードオフ（Decision / Trade-offs） (任意)
 - 論点: ...
@@ -100,51 +90,10 @@ UVX -> CLI: run
   - Troubleshooting（`--help`、env 不足時の挙動）
 
 ### 関数・クラス境界（重要なものだけ）
-- IF-001: `<module>::<function/class signature>`
-  - Input: ...
-  - Output: ...
-  - Errors/Exceptions: ...
-
-### UML（任意） (任意)
-```plantuml
-@startuml
-' TODO: 必要なら UML を追加する（形式は自由）
-@enduml
-```
-
-### クラス/インターフェース詳細設計（主要なもの） (任意)
-> この Issue を “単独の作業単位” として完結させるために、必要な範囲だけ詳細化する。
-
-- Class: `<ClassName>`
-  - Responsibility（責務）:
-    - ...
-  - Public methods（公開メソッド）:
-    - `method(arg: Type) -> Return`
-  - Invariants（不変条件）:
-    - ...
-  - Collaboration（協調関係）:
-    - `<OtherClass>`（理由: ...）
-- Interface / Protocol: `<InterfaceName>`
-  - Contract（契約）:
-    - ...
-  - 実装候補:
-    - `<ImplClass>`
-
-#### UML（任意） (任意)
-```plantuml
-@startuml
-' TODO: 必要なら UML を追加する（形式は自由）
-@enduml
-```
+- 該当なし（ドキュメントのみ）
 
 ### 例外/エラー契約（重要なものだけ） (任意)
-- ERR-001: <エラー名/コード>
-  - 発生条件:
-    - ...
-  - 呼び出し元への返し方（例: 例外/戻り値/HTTP）:
-    - ...
-  - ログ/監視:
-    - ...
+- 該当なし（ドキュメントのみ）
 
 ## 変更計画（ファイルパス単位） (必須)
 - 追加（Add）:
@@ -154,9 +103,11 @@ UVX -> CLI: run
 - 削除（Delete）:
   - なし
 - 移動/リネーム（Move/Rename）:
-  - `<from>` → `<to>`: <目的>
+  - なし
 - 参照（Read only / context）:
-  - `<path/to/reference_file>`: <読む理由>
+  - `spec-dock/initiatives/init-00001-codex-notify-json-logger/artifacts/notify-payload.md`: notify payload の前提を参照するため
+  - `spec-dock/initiatives/init-00001-codex-notify-json-logger/adrs/adr-00005-dotenv-loading-strategy.md`: `.env` 方針を参照するため
+  - `spec-dock/initiatives/init-00001-codex-notify-json-logger/adrs/adr-00006-uvx-ref-pinning-strategy.md`: uvx ref 固定方針を参照するため
 
 ## マッピング（要件 → 設計） (必須)
 - AC-001 → IF-README-001（Run via uvx セクション）

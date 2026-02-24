@@ -110,7 +110,7 @@ S1 --> S2
 #### 期待する振る舞い（テストケース） (必須)
 - Given: README.md
 - When: Telegram 前提/環境変数/.env を読む
-- Then: 必要 env、topics 前提、`.env` の優先順位（env > .env）が明記されている
+- Then: 必要 env、topics 前提、bot 権限（topics 作成）、`.env` 方針（`<cwd>/.env` 自動読込、環境変数優先、`uvx --env-file` は任意）が明記されている
 - 観測点: `README.md`
 - 追加/更新するテスト: N/A（ドキュメント）
 
