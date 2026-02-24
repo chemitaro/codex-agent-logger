@@ -27,18 +27,21 @@ ID: "epic-local-00002"
   - 成果物（Deliverable）:
     - `telegram-topics.json` の mapping 保存（ロック＋原子的置換）
     - 4096 超過時の分割送信（改行優先＋強制分割フォールバック）
-    - argv[2] の `--telegram` 指定時のみ送信する（フラグ無しは送信しない）
+    - `--telegram` 指定時のみ送信する（フラグ無しは送信しない）
+    - `--telegram` 指定時に env 不足なら warn を出して送信しない
   - 対応する E-RQ / E-AC:
-    - E-RQ-001..004 / E-AC-001..002
+    - E-RQ-001..006 / E-AC-001..004
   - Depends on:
-    - ...
-- iss-xxxx-...:
-  - ...
+    - epic-local-00001（Local Logging and Summary）の log 保存（最後のアウトプット取得）
+    - epic-local-00003（Packaging and CLI）の CLI 土台（pyproject/entrypoint/テスト基盤）
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+
+rectangle "iss-... telegram topic+send" as I1
+I1
 @enduml
 ```
 
@@ -50,11 +53,11 @@ ID: "epic-local-00002"
 
 ## ロールアウト / 移行 (必須)
 - Feature flag:
-  - ...
+  - `--telegram`（フラグ未指定なら送信しない）
 - 段階公開（カナリア/一部テナント/内部先行など）:
-  - ...
+  - なし（ローカル運用）
 - ロールバック:
-  - ...
+  - `--telegram` を外す（送信しない）
 
 ## Issue Definition of Ready（Issue に求める着手可能条件） (必須)
 - [ ] Issue requirement に AC/EC がテスト可能な形で書けている
@@ -65,7 +68,7 @@ ID: "epic-local-00002"
 - [ ] 未確定事項が「質問/選択肢/推奨案/影響範囲」で整理されている
 
 ## 実行コマンド（必要なら） (任意)
-- Test: `<command>`
+- Test: `pytest -q`
 - Lint/Format: `<command>`
 - Typecheck: `<command>`
 

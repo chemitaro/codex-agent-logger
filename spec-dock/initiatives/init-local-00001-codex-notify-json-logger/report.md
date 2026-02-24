@@ -14,14 +14,18 @@ ID: "init-local-00001"
 - 現在地（何が完了し、何が未完か）:
   - initiative 作成: `init-local-00001-codex-notify-json-logger`
   - ADR 更新（accepted）: `adr-00001-notify-logger-output-and-telegram.md`
-  - Codex CLI `notify` の仕様確認（docs 参照、JSON が argv[1] で渡る）
+  - Codex CLI `notify` の仕様確認（docs / source 参照、JSON は **単一のコマンド引数**で渡り、追加引数がある場合は **末尾に付与される**）
   - requirement/design/plan の初版作成
   - Epic 作成:
     - `epic-local-00001-local-logging-and-summary`
     - `epic-local-00002-telegram-topics-delivery`
+    - `epic-local-00003-packaging-and-cli`
+  - 調査メモ:
+    - `artifacts/notify-payload.md`（現行 payload の主要キー、token 情報が含まれない点）
 - 次のマイルストーン:
-  - epic-00001-local-logging-and-summary の着手（TDD）
-  - epic-00002-telegram-topics の着手（TDD）
+  - epic-local-00003-packaging-and-cli の着手（TDD）
+  - epic-local-00001-local-logging-and-summary の着手（TDD）
+  - epic-local-00002-telegram-topics の着手（TDD）
 - ブロッカー:
   - token 使用量を扱うか（扱う場合の取得経路/実装）
 
@@ -62,7 +66,9 @@ ID: "init-local-00001"
 
 ## フォローアップ（別Issue化） (必須)
 - Epic/Issue links:
-  - ...
+  - `epic-local-00003-packaging-and-cli`
+  - `epic-local-00001-local-logging-and-summary`
+  - `epic-local-00002-telegram-topics-delivery`
 
 ## 省略/例外メモ (必須)
 - 該当なし

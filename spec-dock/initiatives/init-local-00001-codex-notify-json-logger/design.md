@@ -103,6 +103,8 @@ Notify --> TopicMap : mapping (optional)
   - Telegram に送るのは `last-assistant-message` のみ（入力/トークン等は送らない）
   - `.codex` を汚さない（ログは `.codex-log/` のみ）
   - ファイル名へ `thread-id`/`turn-id` を生で埋め込まない（正規化/短縮/ハッシュ等で安全化し、生値は raw JSON に残す）
+  - 同名ファイルが発生しても上書きしない（排他的作成 + サフィックス等で必ず別名保存）
+  - `.codex-log/` 配下は機密を含み得るため、可能な範囲で restrictive な権限（例: dir 0700 / file 0600）で作成する
 - 観測性（ログ/メトリクス/トレース）:
   - 失敗は stderr に出し、exit code で検知できるようにする（ローカル保存の失敗は非許容）
 - 品質ゲート（必須テスト/レビュー条件）:
@@ -138,7 +140,7 @@ Notify --> TopicMap : mapping (optional)
 ```
 
 ### 更新方式（事故防止）
-- `summary.md`: `summary.md.tmp` に生成 → fsync → rename で原子的に置換（失敗時は旧 summary を維持）
+- `summary.md`: lock → `summary.md.tmp` に生成 → fsync → rename で原子的に置換（失敗時は旧 summary を維持）
 - `telegram-topics.json`: lock → read-modify-write（tmp + rename）で破損しにくくする
 
 ## 配布/実行（uvx） (必須)
