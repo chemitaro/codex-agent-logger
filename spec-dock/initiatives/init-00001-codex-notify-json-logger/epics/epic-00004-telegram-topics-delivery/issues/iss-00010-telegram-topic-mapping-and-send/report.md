@@ -58,10 +58,11 @@ uv run pytest -q
 - `tests/test_cli_args.py` - Telegram 呼び出しをモック
 
 #### コミット
-- <hash> <message>
+- a5ff89f docs(spec-dock): iss-00010の仕様を精緻化
+- d63542a feat(telegram): topic送信とmappingを追加
 
 #### メモ
-- ...
+- GitHub push が 403 のため、push/Issueクローズは認証修正後に実施する
 
 ---
 
