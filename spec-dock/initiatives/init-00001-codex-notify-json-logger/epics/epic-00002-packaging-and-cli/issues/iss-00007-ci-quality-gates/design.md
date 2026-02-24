@@ -18,6 +18,9 @@ ID: "iss-00007"
 - MUST NOT: 機密値を必須化しない / デプロイしない。
 - 非交渉制約: 既存の運用（uv/uvx）を前提にする。
 - 前提: `iss-00005` で pyproject + pytest が導入されている。
+- 固定する仕様:
+  - Triggers: `pull_request`, `push`（main 含む）
+  - Python: `3.11`（`requires-python >=3.11` に合わせる）
 
 ---
 
@@ -27,7 +30,8 @@ ID: "iss-00007"
 - 観測した現状（事実）:
   - `.github/workflows/` が存在しない。
 - 採用するパターン（命名/責務/例外/DI/テストなど）:
-  - `astral-sh/setup-uv` で uv を用意し `uv run pytest -q` を実行する。
+  - `actions/setup-python` で Python 3.11 を用意し、`astral-sh/setup-uv` で uv/uvx を用意する。
+  - `pull_request` / `push` で workflow を起動し、`uv run --frozen pytest -q` と `uvx --from . codex-logger --help` を実行する。
 - 採用しない/変更しない（理由）:
   - secrets を workflow に持たせない（Telegram は任意）。
 - 影響範囲（呼び出し元/関連コンポーネント）:
@@ -130,16 +134,20 @@ ID: "iss-00007"
 - 変更（Modify）:
   - なし
 - 削除（Delete）:
-  - `<path/to/obsolete_file>`: <なぜ削除するか>
+  - なし
 - 移動/リネーム（Move/Rename）:
-  - `<from>` → `<to>`: <目的>
+  - なし
 - 参照（Read only / context）:
-  - `<path/to/reference_file>`: <読む理由>
+  - `pyproject.toml`: Python 要件（>=3.11）と CLI entry、dev 依存（pytest）を確認するため
+  - `uv.lock`: `uv run --frozen` 前提のため
 
 ## マッピング（要件 → 設計） (必須)
-- AC-001 → `.github/workflows/ci.yml`
-- EC-001 → `<path/...>`（エラー処理の場所）
-- 非交渉制約 → どの設計で満たすか（例: キャッシュ、冪等、監査ログなど）
+- AC-001 → `.github/workflows/ci.yml`（`uv run --frozen pytest -q`）
+- AC-002 → `.github/workflows/ci.yml`（`uvx --from . codex-logger --help`）
+- AC-003 → `.github/workflows/ci.yml`（Telegram secrets を要求しない）
+- EC-001 → `.github/workflows/ci.yml`（pytest の失敗は job fail）
+- EC-002 → `.github/workflows/ci.yml`（smoke の失敗は job fail）
+- 非交渉制約 → `.github/workflows/ci.yml`（secrets 未設定でも CI が通る）
 
 ## テスト戦略（最低限ここまで具体化） (任意)
 - 追加/更新するテスト:
