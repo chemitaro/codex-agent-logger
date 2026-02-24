@@ -42,7 +42,7 @@ ID: "iss-00006"
 - `spec-dock/active/issue/report.md` - iss-00006 セッションログ追記
 
 #### コミット
-- <hash> docs(readme): READMEと利用例を整備
+- c5e3966 docs(readme): READMEと利用例を整備
 
 #### メモ
 - テスト: N/A（ドキュメント変更のみ）
