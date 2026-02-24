@@ -14,7 +14,7 @@ ID: "iss-00011"
 
 ## この計画で満たす要件ID (必須)
 - 対象AC: AC-001, AC-002, AC-003, AC-004, AC-005, AC-006
-- 対象EC: EC-001, EC-002
+- 対象EC: EC-001, EC-002, EC-003
 - 対象制約: 依存追加なし / ローカル保存は必達（`.codex-log/.gitignore` 失敗で exit non-zero にしない）
 
 ## ステップ一覧（観測可能な振る舞い） (必須)
@@ -45,6 +45,7 @@ S2 --> S3
 - AC-005 → S01
 - EC-001 → S03
 - EC-002 → S01
+- EC-003 → S03
 - 非交渉制約（ローカル保存優先/依存追加なし）→ S03
 
 ---
@@ -118,6 +119,7 @@ S2 --> S3
 - 設計参照:
   - 対象IF: `codex_logger.gitignore.ensure_codex_log_dir_ignored`
   - 対象テスト: `tests/test_log_store.py::test_save_raw_payload_warns_on_codex_log_gitignore_failure_but_saves`
+  - 対象テスト: `tests/test_gitignore.py::test_ensure_skips_when_codex_log_dir_is_symlink`
 - 期待する振る舞い:
   - `.codex-log/.gitignore` 更新に失敗しても例外を投げず、warning を出して継続する
 
