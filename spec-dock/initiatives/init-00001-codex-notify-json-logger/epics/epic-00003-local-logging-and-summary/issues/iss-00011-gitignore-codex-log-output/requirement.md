@@ -150,6 +150,10 @@ Logger -> Gitignore: ensure ignore-all\n(inside .codex-log only)
   - 条件: `<cwd>/.codex-log/.gitignore` が既に存在するが内容が異なる
   - 期待: 標準の ignore-all ルール（`.codex-log/` 配下を全て ignore）に更新される
   - 観測点: filesystem
+- EC-003:
+  - 条件: `<cwd>/.codex-log/` がシンボリックリンク（symlink）である
+  - 期待: `.codex-log/.gitignore` の生成/更新をスキップし、warning を出して継続する（`<cwd>/.gitignore` を汚染しないため）
+  - 観測点: filesystem / stderr
 
 ## 用語（ドメイン語彙） (必須)
 - TERM-001: `.codex-log/` = `codex-logger` が生成するログディレクトリ

@@ -54,3 +54,26 @@ def test_ensure_warns_on_codex_log_gitignore_failure(
     stderr = capsys.readouterr().err
     assert "warn:" in stderr
     assert ".gitignore" in stderr
+
+
+def test_ensure_skips_when_codex_log_dir_is_symlink(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    codex_log_dir = workspace / ".codex-log"
+
+    try:
+        codex_log_dir.symlink_to(workspace, target_is_directory=True)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"symlink not supported: {exc}")
+
+    changed = ensure_codex_log_dir_ignored(codex_log_dir)
+
+    assert changed is False
+    assert not (workspace / ".gitignore").exists()
+
+    stderr = capsys.readouterr().err
+    assert "warn:" in stderr
+    assert "symlink" in stderr.lower()
