@@ -52,6 +52,11 @@ def test_payload_json_with_or_without_telegram(
         "codex_logger.cli.summary.rebuild_summary",
         lambda base_dir: rebuilt.append(base_dir),
     )
+    telegram_calls: list[bool] = []
+    monkeypatch.setattr(
+        "codex_logger.cli.telegram.send_last_message_best_effort",
+        lambda *_args, **_kwargs: telegram_calls.append(True),
+    )
 
     args = parse_args(argv)
     assert args.payload_json == '{"type":"agent-turn-complete"}'
@@ -59,6 +64,7 @@ def test_payload_json_with_or_without_telegram(
 
     assert main(argv) == 0
     assert rebuilt == [saved_path.parent.parent]
+    assert telegram_calls == ([True] if "--telegram" in argv else [])
 
 
 @pytest.mark.parametrize(
@@ -77,4 +83,3 @@ def test_unknown_or_extra_args_are_usage_error(
 
     stderr = capsys.readouterr().err
     assert "usage:" in stderr
-

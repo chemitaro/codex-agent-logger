@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 
 from codex_logger import __version__
-from codex_logger import log_store, payload, summary
-from codex_logger.console import error
+from codex_logger import log_store, payload, summary, telegram
+from codex_logger.console import error, warn
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="codex-logger")
@@ -50,6 +50,14 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:
         error(f"failed to rebuild summary: {exc}")
         return 1
+
+    if args.telegram:
+        try:
+            telegram.send_last_message_best_effort(
+                args.payload_json, base_cwd=base_dir.parent, base_dir=base_dir
+            )
+        except Exception as exc:
+            warn(f"telegram delivery failed: {exc.__class__.__name__}")
 
     return 0
 
