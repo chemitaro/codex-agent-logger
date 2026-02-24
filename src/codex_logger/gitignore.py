@@ -19,7 +19,7 @@ def ensure_codex_log_ignored(base_cwd: Path) -> bool:
 
     try:
         existing = gitignore_path.read_text(encoding="utf-8") if gitignore_path.exists() else ""
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         warn(f"failed to read {gitignore_path}: {exc}")
         return False
 
@@ -29,7 +29,7 @@ def ensure_codex_log_ignored(base_cwd: Path) -> bool:
     updated = _append_rule(existing, _CODEX_LOG_RULE)
     try:
         write_text_atomic(gitignore_path, updated)
-    except OSError as exc:
+    except (OSError, UnicodeError) as exc:
         warn(f"failed to update {gitignore_path}: {exc}")
         return False
 

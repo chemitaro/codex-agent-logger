@@ -83,3 +83,22 @@ def test_ensure_ignores_comments(tmp_path: Path) -> None:
 
     assert changed is True
     assert gitignore.read_text(encoding="utf-8") == "# .codex-log/\n.codex-log/\n"
+
+
+def test_ensure_warns_on_non_utf8_gitignore(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    gitignore = workspace / ".gitignore"
+    gitignore.write_bytes(b"\xff\xfe")
+
+    changed = ensure_codex_log_ignored(workspace)
+
+    assert changed is False
+    assert gitignore.read_bytes() == b"\xff\xfe"
+
+    stderr = capsys.readouterr().err
+    assert "warn:" in stderr
+    assert ".gitignore" in stderr
