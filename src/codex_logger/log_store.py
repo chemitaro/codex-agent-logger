@@ -87,3 +87,4 @@ def _write_payload_file(logs_dir: Path, stem: str, payload_bytes: bytes) -> Path
         return candidate
 
     raise FileExistsError(f"too many collisions for {stem}.json")
+
