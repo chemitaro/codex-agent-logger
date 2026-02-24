@@ -61,3 +61,6 @@ uvx --from /path/to/local/clone codex-logger '<payload-json>'
 - 破壊的操作（履歴改変/強制更新など）は禁止
 - `git add` / `git commit` はユーザーの明示的な指示がある場合のみ
 - コミットメッセージ: Conventional Commits（日本語、複数行必須）
+
+## 注意（シェル事故防止）
+- `gh issue close -c` 等でシェル引数にバッククォート（`...`）を含めると bash のコマンド置換が走るため、コメント本文では使用しない（プレーンテキスト推奨）。
