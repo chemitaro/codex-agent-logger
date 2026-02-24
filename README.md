@@ -62,6 +62,22 @@ notify = ["uvx", "--from", "git+https://github.com/chemitaro/codex-agent-logger@
 
 ※ `@v0.1.0` は例です。実際に存在する tag に置き換えてください。
 
+ローカル clone から（開発/検証向け）:
+
+```toml
+# ~/.codex/config.toml
+notify = ["uvx", "--from", "/path/to/local/clone", "codex-logger"]
+```
+
+ローカル clone + Telegram あり:
+
+```toml
+# ~/.codex/config.toml
+notify = ["uvx", "--from", "/path/to/local/clone", "codex-logger", "--telegram"]
+```
+
+※ `--from` のパスは、Codex を実行する作業ディレクトリから見えるパス（絶対パス/相対パス）を指定してください。
+
 ## Telegram（任意）を使う場合の前提
 
 - 対象チャットは **supergroup** を使用する
