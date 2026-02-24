@@ -78,7 +78,12 @@ S3 --> S4
 #### 期待する振る舞い（テストケース） (必須)
 - Given: `cwd="/path/to/project"`, `thread-id="abc"`
 - When: topic 名を生成する
-- Then: `project (abc)` 形式で、128 bytes を超えない
+- Then:
+  - 通常: `project (abc)` 形式で、`len(name.encode("utf-8")) <= 128`
+  - 128 bytes を超過する場合:
+    - `project (<sha256(thread-id)[:8]>)` に短縮される（`adr-00002`）
+    - それでも超過する場合は `cwd_basename` を UTF-8 bytes 基準で切り詰め、同形式を維持する
+  - 多バイト文字（例: 日本語）を含んでも bytes 計算が崩れない
 - 観測点: unit test
 - 追加/更新するテスト: `tests/test_telegram_topic_name.py`
 
@@ -114,6 +119,11 @@ S3 --> S4
 - 設計参照:
   - IF-CHUNK-001
   - `tests/test_chunking.py`
+- 期待する振る舞い（最低限の観測ケース）:
+  - prefix を含めて `len(text) <= 4096` を満たす
+  - 改行境界優先で分割される（行の途中で切らない）
+  - 1行が長すぎて入らない場合のみ強制分割する
+  - `n >= 10` でも prefix 長が変わることを考慮して成立する（limit を小さくした unit test で検証）
 
 ### S03 — Telegram API（create/send）をモックで検証できる (必須)
 - 対象: AC-001
@@ -124,6 +134,10 @@ S3 --> S4
 - 対象: AC-003, AC-004 / EC-001, EC-002
 - 設計参照:
   - `cli`（フラグ判定、例外捕捉、warn、exit code）
+- 追加/更新するテスト（ADR-00008の優先順位を固定）:
+  - `tests/test_cli_exit_codes.py::test_cli_zero_when_telegram_send_fails`
+  - `tests/test_cli_exit_codes.py::test_cli_zero_when_telegram_prereq_missing`
+  - `tests/test_cli_exit_codes.py::test_cli_nonzero_when_local_save_fails_with_telegram`
 
 ---
 

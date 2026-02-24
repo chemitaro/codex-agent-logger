@@ -50,11 +50,12 @@ ID: "iss-00010"
 ## 主要フロー（テキスト：AC単位で短く） (任意)
 - Flow for AC-001:
   1) `--telegram` が無ければ即 skip
-  2) env をロード（env > `<cwd>/.env`）。不足なら warn + skip
-  3) payload を parse（best effort）し、必須項目を検証
-     - `thread-id`（非空） or `last-assistant-message`（非空）が無ければ warn + **送信フロー全体を skip**
-  4) mapping を lock 下でロード
-  5) `thread-id` の topic が無ければ `createForumTopic` で作成し mapping を保存（lock + atomic replace）
+  2) payload を parse（best effort）し、必須項目を検証
+     - `thread-id`（非空） or `last-assistant-message`（非空）が無ければ warn + **送信フロー全体を skip**（`.env` 読込や mapping 更新もしない）
+  3) `cwd` を解決する（payload の `cwd` を正、欠損時は実行時 cwd）
+  4) env をロード（env > `<cwd>/.env`）。不足なら warn + skip
+  5) mapping を **単一ロック区間**で read-modify-write する
+     - `thread-id` が未登録なら、ロック区間内で `createForumTopic` → mapping 更新（tmp + atomic replace）
   6) `last-assistant-message` を chunk 分割（`adr-00007`）し `sendMessage` を複数回
   7) Telegram 失敗は例外を握りつぶさず warn として扱う（exit code は `adr-00008`）
 - Flow for AC-002:
