@@ -13,46 +13,39 @@ ID: "iss-00006"
 # iss-00006 README and Usage Examples — 実装報告（LOG）
 
 ## 実装サマリー (任意)
-- [実装した内容の概要を2-3文で記載]
+- `README.md` を追加し、uvx 実行例（GitHub / `@tag` / `@sha` / local）と Codex `notify` 統合例（Telegram なし/あり）を整備した。
+- Telegram 前提（supergroup + topics、bot 権限）と env/.env 方針を明記し、機密値はプレースホルダに統一した。
 
 ## 実装記録（セッションログ） (必須)
 
-### 2026-02-24 HH:MM - HH:MM
+### 2026-02-24 17:55 - 18:05
 
 #### 対象
-- Step: S01, S02, ...
-- AC/EC: AC-___, EC-___
+- Step: S01, S02
+- AC/EC: AC-001, AC-002, AC-003, EC-001, EC-002
 
 #### 実施内容
-- ...
+- `README.md` を新規作成し、uvx 実行例（GitHub / `@tag` / `@sha` / local path）を追加した。
+- Codex CLI `notify` の設定例（Telegram なし/あり）を追加した。
+- Telegram 利用前提（supergroup + topics、bot 権限、必要 env）を追記した。
+- `.env` 方針（`<cwd>/.env` 自動読込、環境変数優先、`uvx --env-file` 任意）を追記した。
+- `.codex-log/` の出力構成と参照先（spec-dock / ADR / notify docs）を追記した。
+- 機密値はすべてプレースホルダ表記に統一した。
 
 #### 実行コマンド / 結果
 ```bash
-<command>
-
-<result>
+# N/A（ドキュメント変更のみ）
 ```
 
 #### 変更したファイル
-- `path/to/file1` - ...
-- `path/to/file2` - ...
+- `README.md` - README and Usage Examples の追加
+- `spec-dock/active/issue/report.md` - iss-00006 セッションログ追記
 
 #### コミット
-- <hash> <message>
+- <hash> docs(readme): READMEと利用例を整備
 
 #### メモ
-- ...
-
----
-
-### 2026-02-24 HH:MM - HH:MM
-
-#### 対象
-- Step: ...
-- AC/EC: ...
-
-#### 実施内容
-- ...
+- テスト: N/A（ドキュメント変更のみ）
 
 ---
 
