@@ -60,7 +60,8 @@ def test_rebuild_summary_from_logs(tmp_path: Path) -> None:
     assert "**Assistant**" in content
     assert "> Hello" not in content
     assert "> Show me code" in content
-    assert "> Here is **code**" in content
+    assert "**Assistant (thread-1)**\nHere is **code**" in content
+    assert "\n> Here is **code**" not in content
     assert "> Need thread id" in content
 
 
@@ -90,7 +91,8 @@ def test_multiline_messages_are_blockquoted(tmp_path: Path) -> None:
     assert "**User**" in content
     assert "> line-1\n> line-2" in content
     assert "**Assistant (thread-ml)**" in content
-    assert "> answer-1\n> \n> answer-3" in content
+    assert "**Assistant (thread-ml)**\nanswer-1\n\nanswer-3" in content
+    assert "\n> answer-1\n> \n> answer-3" not in content
 
 
 def test_missing_or_invalid_messages_are_rendered_best_effort(tmp_path: Path) -> None:
@@ -177,27 +179,27 @@ def test_missing_or_invalid_messages_are_rendered_best_effort(tmp_path: Path) ->
 
     missing_section = _section("2026-02-24 09:53:12.001Z")
     assert "**User**\n> <missing>" in missing_section
-    assert "**Assistant (thread-missing)**\n> <missing>" in missing_section
+    assert "**Assistant (thread-missing)**\n<missing>" in missing_section
 
     empty_section = _section("2026-02-24 09:53:12.002Z")
     assert "**User**\n> <missing>" in empty_section
-    assert "**Assistant**\n> <missing>" in empty_section
+    assert "**Assistant**\n<missing>" in empty_section
 
     invalid_section = _section("2026-02-24 09:53:12.003Z")
     assert "**User**\n> <invalid>" in invalid_section
-    assert "**Assistant**\n> <invalid>" in invalid_section
+    assert "**Assistant**\n<invalid>" in invalid_section
 
     empty_element_section = _section("2026-02-24 09:53:12.004Z")
     assert "**User**\n> next" in empty_element_section
-    assert "**Assistant**\n> ok" in empty_element_section
+    assert "**Assistant**\nok" in empty_element_section
 
     last_empty_section = _section("2026-02-24 09:53:12.005Z")
     assert "**User**\n> <missing>" in last_empty_section
-    assert "**Assistant**\n> ok-last" in last_empty_section
+    assert "**Assistant**\nok-last" in last_empty_section
 
     mixed_type_section = _section("2026-02-24 09:53:12.006Z")
     assert "**User**\n> <invalid>" in mixed_type_section
-    assert "**Assistant**\n> assistant-ok" in mixed_type_section
+    assert "**Assistant**\nassistant-ok" in mixed_type_section
 
 
 def test_invalid_json_is_recorded(tmp_path: Path) -> None:
@@ -226,7 +228,8 @@ def test_invalid_json_is_recorded(tmp_path: Path) -> None:
     assert "<sub>2026-02-24 09:53:12.001Z</sub>" in content
     assert "<sub>2026-02-24 09:53:12.002Z</sub>" in content
     assert "**User**\n> valid-input" in content
-    assert "**Assistant (thread-2)**\n> valid-answer" in content
+    assert "**Assistant (thread-2)**\nvalid-answer" in content
+    assert "\n> valid-answer" not in content
     assert "- parse error:" in content
 
 

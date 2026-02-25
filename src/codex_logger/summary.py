@@ -80,11 +80,15 @@ def _append_assistant_message(lines: list[str], entry: SummaryEntry) -> None:
         label = f"**Assistant ({entry.thread_id})**"
 
     lines.append(label)
-    lines.extend(_blockquote_lines(message))
+    lines.extend(_plain_lines(message))
 
 
 def _blockquote_lines(text: str) -> list[str]:
     return [f"> {line}" for line in text.split("\n")]
+
+
+def _plain_lines(text: str) -> list[str]:
+    return text.split("\n")
 
 
 def _display_message(message: str) -> str:
