@@ -3,7 +3,7 @@
 ID: "iss-00015"
 タイトル: "Summary transcript v2"
 関連GitHub: ["#15"]
-状態: "draft | approved"
+状態: "approved"
 作成者: "codex-agent"
 最終更新: "2026-02-25"
 依存: ["requirement.md", "design.md", "plan.md"]
