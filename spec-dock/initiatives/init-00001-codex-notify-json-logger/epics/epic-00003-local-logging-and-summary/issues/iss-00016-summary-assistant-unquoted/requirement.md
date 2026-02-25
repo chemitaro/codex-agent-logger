@@ -4,7 +4,7 @@ ID: "iss-00016"
 タイトル: "Summary assistant unquoted"
 関連GitHub: ["#16"]
 状態: "draft | approved"
-作成者: "<YOUR_NAME>"
+作成者: "codex-agent"
 最終更新: "2026-02-25"
 親: ["epic-00003", "init-00001"]
 ---
@@ -12,135 +12,126 @@ ID: "iss-00016"
 # iss-00016 Summary assistant unquoted — 要件定義（WHAT / WHY）
 
 ## 目的（ユーザーに見える成果 / To-Be） (必須)
-- （1〜3行）このIssueでユーザーが「何をできるようになるか」を書く。
+- `summary.md` の transcript v2 で、**User は blockquote（網かけ）**, **Assistant は blockquote なし（網かけ無し）**で表示できる。
+- VS Code の Markdown preview で、Assistant 側の「`>` だけが並ぶ網かけ」を解消し、読みやすくする。
 
 ## 背景・現状（As-Is / 調査メモ） (必須)
 - 現状の挙動（事実）:
-  - ...
+  - transcript v2 では User/Assistant ともに本文が blockquote（`> `）で出力される。
 - 現状の課題（困っていること）:
-  - ...
+  - Assistant 側が blockquote のため、空行が多い出力では `>` が連なって見え、視認性が落ちる。
 - 再現手順（最小で）:
-  1) ...
-  2) ...
+  1) `logs/*.json` に `last-assistant-message` が複数行（空行を含む）なログを用意する
+  2) `summary.md` を生成し、Assistant 側が `>` で網かけになることを確認する
 - 観測点（どこを見て確認するか）:
-  - UI: ...
-  - HTTP: ...
-  - DB: ...
-  - Log: ...
-- 実際の観測結果（貼れる範囲で）:
-  - Input/Operation: ...
-  - Output/State: ...
+  - filesystem: `.codex-log/summary.md` の内容（VS Code Markdown preview）
 - 情報源（ヒアリング/調査の根拠）:
-  - Issue/チケット: ...
-  - ドキュメント: ...
-  - コード: `<path/to/file>`（関数/クラス: ... / 仕様を決めている箇所（行番号）: ... / 読むべき理由） ...
-  - 画面/ログ/DB: ...
+  - Issue/チケット: #16
+  - 既存仕様: `iss-00015`（Summary transcript v2）
+  - コード: `src/codex_logger/summary.py`（Assistant を blockquote で出している箇所）
 
 ## 対象ユーザー / 利用シナリオ (任意)
 - 主な利用者（ロール）:
-  - ...
+  - `summary.md` を会話履歴として読みたい開発者
 - 代表的なシナリオ:
-  - ...
+  - User 側は引用表示（blockquote）で入力として区別し、Assistant 側は通常本文として読みたい
 
 ### UML（任意） (任意)
 ```plantuml
 @startuml
-' TODO: 必要なら UML を追加する（形式は自由）
+skinparam monochrome true
+
+note as N
+<sub>2026-02-24 09:53:12.001Z</sub>
+
+**User**
+> user message (quoted)
+
+**Assistant (thread-123)**
+assistant message (plain)
+end note
 @enduml
 ```
 
 ## スコープ（暴走防止のガードレール） (必須)
 - MUST（必ずやる）:
-  - ...
+  - transcript v2 の仕様（timestamp / last user / assistant / metadata 非表示）は維持する（`iss-00015` で確定済み）。
+  - User 本文は blockquote（`> `）で出力する（現状維持）。
+  - Assistant 本文は blockquote を付けず、そのままの Markdown として出力する（新仕様）。
 - MUST NOT（絶対にやらない／追加しない）:
-  - ...
+  - raw logs（`logs/*.json`）を変更しない。
+  - Telegram 送信仕様を変更しない。
 - OUT OF SCOPE:
-  - ...
+  - transcript v1/v2 切替などの大きなフォーマット変更
 
 ## 境界（Always / Ask / Never） (必須)
 - Always（常に守る）:
-  - ...
+  - lock + tmp + atomic replace を維持する（summary の破損防止）
 - Ask（迷ったら相談）:
-  - ...
+  - Assistant の Markdown が summary 構造を壊す場合のエスケープ方針（本 Issue では扱わない）
 - Never（絶対にしない）:
-  - ...
+  - `.codex-log/` 以外への出力追加
 
 ## 非交渉制約（守るべき制約） (必須)
-- 例: 既存API互換を維持する
-- 例: 依存追加はしない（必要なら要件に明記）
-- 例: セキュリティ/プライバシー要件（ログ、マスキング、権限制御など）
-- 例: 性能（p95など）やSLO
-- ...
+- 依存追加なし。
+- `uv run --frozen pytest -q` が通ること。
 
 ## 前提（Assumptions） (必須)
-- 例: 対象ユーザーは〜である
-- 例: 既存データは〜の状態である
-- ...
+- `summary.md` は transcript v2（`iss-00015`）として実装済みである。
 
 ## 判断材料/トレードオフ（Decision / Trade-offs） (任意)
-- 論点: ...
-  - 選択肢A: ...（Pros/Cons）
-  - 選択肢B: ...（Pros/Cons）
-  - 決定: ...
-  - 理由: ...
+- 論点: Assistant を blockquote のままにするか
+  - 選択肢A: 両方 blockquote（Pros: 構造が壊れにくい / Cons: 視認性が悪い）
+  - 選択肢B: User のみ blockquote（Pros: 入力/出力の見分けがつきつつ、出力が読みやすい / Cons: Assistant Markdown が summary 構造を壊し得る）
+  - 決定: B（User のみ blockquote）
+  - 理由: ユーザー要望（網かけ除去）を優先する
 
 ## リスク/懸念（Risks） (任意)
-- R-001: <リスク>（影響: ... / 対応: ...）
-- R-002: ...
+- R-001: Assistant 出力の Markdown が summary 全体の構造を崩す（影響: preview が崩れる）
+  - 対応: 本 Issue ではエスケープは行わず、要望を優先（将来の改善で扱う）
 
 ## 受け入れ条件（観測可能な振る舞い） (必須)
 - AC-001:
-  - Actor/Role: ...
-  - Given: ...
-  - When: ...
-  - Then: ...
-  - 観測点（UI/HTTP/DB/Log など）: ...
-  - 権限/認可条件（ある場合）: ...
+  - Actor/Role: 開発者
+  - Given: transcript v2 の summary を生成する
+  - When: `summary.md` を確認する
+  - Then: User 本文は `> ` で始まる blockquote として表示される
+  - 観測点: `summary.md`
 - AC-002:
-  - Actor/Role: ...
-  - Given: ...
-  - When: ...
-  - Then: ...
-  - 観測点（UI/HTTP/DB/Log など）: ...
-  - 権限/認可条件（ある場合）: ...
+  - Actor/Role: 開発者
+  - Given: transcript v2 の summary を生成する
+  - When: `summary.md` を確認する
+  - Then: Assistant 本文は blockquote（`> `）として出力されない
+  - 観測点: `summary.md`
 
 ### 入力→出力例 (任意)
 - EX-001:
-  - Input: ...
-  - Output: ...
-- EX-002:
-  - Input: ...
-  - Output: ...
+  - Input（log JSON）:
+    - `input-messages`: `["u1"]`
+    - `last-assistant-message`: `"a1\n\n a3"`
+  - Output（summary）:
+    - User 側のみ `> u1`
+    - Assistant 側は `a1` / 空行 / `a3` が `>` 無しで出る
 
 ## 例外・エッジケース（仕様として固定） (必須)
 - EC-001:
-  - 条件: ...
-  - 期待: ...（例: HTTP 4xx/5xx, エラーコード, 表示文言, ログ, DB状態）
-  - 観測点（UI/HTTP/DB/Log など）: ...
+  - 条件: Assistant 本文が複数行で空行を含む
+  - 期待: 空行は `>` を伴わず、そのまま空行として表示される
+  - 観測点: `summary.md`
 - EC-002:
-  - 条件: ...
-  - 期待: ...
-  - 観測点: ...
+  - 条件: transcript v2 の best-effort（missing/invalid/parse error）
+  - 期待:
+    - parse error: 既存どおり `- parse error:` を表示し、生成は継続する
+    - missing/invalid:
+      - User: 既存どおり blockquote（例: `> <missing>` / `> <invalid>`）
+      - Assistant: 本 Issue の方針どおり非 blockquote（例: `<missing>` / `<invalid>`）
 
 ## 用語（ドメイン語彙） (必須)
-- TERM-001: <用語> = <定義>
-- TERM-002: ...
+- TERM-001: blockquote（網かけ） = Markdown の `> ` で始まる引用ブロック
+- TERM-002: transcript v2 = `iss-00015` で確定した summary 形式
 
 ## 未確定事項（TBD / 要確認） (必須)
-- Q-001:
-  - 質問: TBD ...
-  - 選択肢:
-    - A: ...
-    - B: ...
-  - 推奨案（暫定）: ...
-  - 影響範囲: AC-___ / EC-___ / スコープ / 制約 / ...
-- Q-002:
-  - 質問: TBD ...
-  - 選択肢:
-    - A: ...
-    - B: ...
-  - 推奨案（暫定）: ...
-  - 影響範囲: ...
+- 該当なし
 
 ## Definition of Ready（着手可能条件） (必須)
 - [ ] 目的が 1〜3行で明確になっている
@@ -154,6 +145,7 @@ ID: "iss-00016"
 - すべてのAC/ECが満たされる
 - 未確定事項が解消される（残す場合は「残す理由」と「合意」を明記）
 - MUST NOT / OUT OF SCOPE を破っていない
+- `uv run --frozen pytest -q` が通る
 
 ## 省略/例外メモ (必須)
 - 該当なし
