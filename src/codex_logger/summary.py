@@ -10,14 +10,12 @@ from codex_logger.locks import file_lock
 
 @dataclass(frozen=True)
 class SummaryEntry:
-    filename: str
-    type_value: str | None
+    timestamp: str
     thread_id: str | None
-    turn_id: str | None
-    input_messages: list[str] | None
-    input_messages_state: str
-    last_assistant_message: str | None
-    last_assistant_message_state: str
+    user_message: str | None
+    user_message_state: str
+    assistant_message: str | None
+    assistant_message_state: str
     parse_error: str | None = None
 
 
@@ -42,16 +40,11 @@ def render_summary(entries: list[SummaryEntry]) -> str:
     lines = ["# Codex Logger Summary", ""]
 
     for entry in entries:
-        lines.append(f"## {entry.filename}")
+        lines.append(f"<sub>{entry.timestamp}</sub>")
         if entry.parse_error is not None:
             lines.append(f"- parse error: {entry.parse_error}")
             lines.append("")
             continue
-
-        lines.append(f"- type: {_display_field(entry.type_value)}")
-        lines.append(f"- thread-id: {_display_field(entry.thread_id)}")
-        lines.append(f"- turn-id: {_display_field(entry.turn_id)}")
-        lines.append("")
 
         _append_user_messages(lines, entry)
         _append_assistant_message(lines, entry)
@@ -61,34 +54,32 @@ def render_summary(entries: list[SummaryEntry]) -> str:
 
 
 def _append_user_messages(lines: list[str], entry: SummaryEntry) -> None:
-    if entry.input_messages_state == "invalid":
-        lines.append("### User")
-        lines.extend(_blockquote_lines("<invalid>"))
-        lines.append("")
-        return
+    if entry.user_message_state == "invalid":
+        message = "<invalid>"
+    elif entry.user_message_state == "missing":
+        message = "<missing>"
+    else:
+        message = _display_message(entry.user_message or "")
 
-    if entry.input_messages_state == "missing" or not entry.input_messages:
-        lines.append("### User")
-        lines.extend(_blockquote_lines("<missing>"))
-        lines.append("")
-        return
-
-    total = len(entry.input_messages)
-    for index, message in enumerate(entry.input_messages, start=1):
-        lines.append(f"### User ({index}/{total})")
-        lines.extend(_blockquote_lines(_display_message(message)))
-        lines.append("")
+    lines.append("**User**")
+    lines.extend(_blockquote_lines(message))
+    lines.append("")
 
 
 def _append_assistant_message(lines: list[str], entry: SummaryEntry) -> None:
-    if entry.last_assistant_message_state == "invalid":
+    if entry.assistant_message_state == "invalid":
         message = "<invalid>"
-    elif entry.last_assistant_message_state == "missing":
+    elif entry.assistant_message_state == "missing":
         message = "<missing>"
     else:
-        message = _display_message(entry.last_assistant_message or "")
+        message = _display_message(entry.assistant_message or "")
 
-    lines.append("### Assistant")
+    if entry.thread_id is None:
+        label = "**Assistant**"
+    else:
+        label = f"**Assistant ({entry.thread_id})**"
+
+    lines.append(label)
     lines.extend(_blockquote_lines(message))
 
 
@@ -100,49 +91,63 @@ def _display_message(message: str) -> str:
     return message if message != "" else "<missing>"
 
 
+def _format_timestamp(raw: str) -> str:
+    if "T" not in raw:
+        return raw
+
+    date_part, time_part = raw.split("T", 1)
+    if not time_part.endswith("Z"):
+        return raw
+
+    clock = time_part[:-1]
+    parts = clock.split("-")
+    if len(parts) != 3:
+        return raw
+
+    hour, minute, second = parts
+    return f"{date_part} {hour}:{minute}:{second}Z"
+
+
 def _load_summary_entry(log_path: Path) -> SummaryEntry:
+    raw_timestamp = log_path.stem.split("_", 1)[0]
+    timestamp = _format_timestamp(raw_timestamp)
+
     try:
         payload = json.loads(log_path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise TypeError("payload JSON is not an object")
     except Exception as exc:
         return SummaryEntry(
-            filename=log_path.name,
-            type_value=None,
+            timestamp=timestamp,
             thread_id=None,
-            turn_id=None,
-            input_messages=None,
-            input_messages_state="missing",
-            last_assistant_message=None,
-            last_assistant_message_state="missing",
+            user_message=None,
+            user_message_state="missing",
+            assistant_message=None,
+            assistant_message_state="missing",
             parse_error=str(exc),
         )
 
-    input_messages, input_messages_state = _extract_input_messages(payload)
-    last_assistant_message, last_assistant_message_state = _extract_last_assistant_message(
-        payload
-    )
+    user_message, user_message_state = _extract_input_messages(payload)
+    assistant_message, assistant_message_state = _extract_last_assistant_message(payload)
 
     return SummaryEntry(
-        filename=log_path.name,
-        type_value=_string_or_none(payload, "type"),
+        timestamp=timestamp,
         thread_id=_string_or_none(payload, "thread-id"),
-        turn_id=_string_or_none(payload, "turn-id"),
-        input_messages=input_messages,
-        input_messages_state=input_messages_state,
-        last_assistant_message=last_assistant_message,
-        last_assistant_message_state=last_assistant_message_state,
+        user_message=user_message,
+        user_message_state=user_message_state,
+        assistant_message=assistant_message,
+        assistant_message_state=assistant_message_state,
     )
 
 
 def _string_or_none(payload: dict[str, object], key: str) -> str | None:
     value = payload.get(key)
-    if isinstance(value, str):
+    if isinstance(value, str) and value != "":
         return value
     return None
 
 
-def _extract_input_messages(payload: dict[str, object]) -> tuple[list[str] | None, str]:
+def _extract_input_messages(payload: dict[str, object]) -> tuple[str | None, str]:
     if "input-messages" not in payload:
         return None, "missing"
 
@@ -152,13 +157,15 @@ def _extract_input_messages(payload: dict[str, object]) -> tuple[list[str] | Non
     if not value:
         return None, "missing"
 
-    messages: list[str] = []
     for item in value:
         if not isinstance(item, str):
             return None, "invalid"
-        messages.append(item)
 
-    return messages, "present"
+    last_message = value[-1]
+    if last_message == "":
+        return None, "missing"
+
+    return last_message, "present"
 
 
 def _extract_last_assistant_message(payload: dict[str, object]) -> tuple[str | None, str]:
