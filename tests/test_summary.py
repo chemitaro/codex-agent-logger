@@ -103,6 +103,7 @@ def test_missing_or_invalid_messages_are_rendered_best_effort(tmp_path: Path) ->
     invalid_log = logs_dir / "2026-02-24T09-53-12.003Z_ev-invalid.json"
     empty_element_log = logs_dir / "2026-02-24T09-53-12.004Z_ev-empty-element.json"
     last_empty_log = logs_dir / "2026-02-24T09-53-12.005Z_ev-last-empty.json"
+    mixed_type_log = logs_dir / "2026-02-24T09-53-12.006Z_ev-mixed-type.json"
 
     missing_log.write_text(
         json.dumps(
@@ -154,6 +155,16 @@ def test_missing_or_invalid_messages_are_rendered_best_effort(tmp_path: Path) ->
         ),
         encoding="utf-8",
     )
+    mixed_type_log.write_text(
+        json.dumps(
+            {
+                "type": "agent-turn-complete",
+                "input-messages": ["ok", 1],
+                "last-assistant-message": "assistant-ok",
+            }
+        ),
+        encoding="utf-8",
+    )
 
     summary_path = rebuild_summary(base_dir)
     content = summary_path.read_text(encoding="utf-8")
@@ -183,6 +194,10 @@ def test_missing_or_invalid_messages_are_rendered_best_effort(tmp_path: Path) ->
     last_empty_section = _section("2026-02-24 09:53:12.005Z")
     assert "**User**\n> <missing>" in last_empty_section
     assert "**Assistant**\n> ok-last" in last_empty_section
+
+    mixed_type_section = _section("2026-02-24 09:53:12.006Z")
+    assert "**User**\n> <invalid>" in mixed_type_section
+    assert "**Assistant**\n> assistant-ok" in mixed_type_section
 
 
 def test_invalid_json_is_recorded(tmp_path: Path) -> None:
@@ -264,4 +279,3 @@ def test_lock_prevents_corruption(tmp_path: Path) -> None:
 
     thread.join(timeout=1)
     assert second_acquired.is_set()
-
