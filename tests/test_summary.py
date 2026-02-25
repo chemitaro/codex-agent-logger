@@ -44,19 +44,24 @@ def test_rebuild_summary_from_logs(tmp_path: Path) -> None:
 
     content = summary_path.read_text(encoding="utf-8")
     assert content.startswith("# Codex Logger Summary\n")
-    assert content.index(f"## {first_log.name}") < content.index(f"## {second_log.name}")
-    assert "- type: agent-turn-complete" in content
-    assert "- thread-id: thread-1" in content
-    assert "- turn-id: turn-1" in content
+    assert content.index("<sub>2026-02-24 09:53:12.001Z</sub>") < content.index(
+        "<sub>2026-02-24 09:53:12.002Z</sub>"
+    )
+    assert first_log.name not in content
+    assert second_log.name not in content
+    assert "ev-a" not in content
+    assert "ev-b" not in content
+    assert "- type:" not in content
+    assert "- thread-id:" not in content
+    assert "- turn-id:" not in content
     assert "- cwd:" not in content
-    assert "### User (1/2)" in content
-    assert "### User (2/2)" in content
-    assert "### Assistant" in content
-    assert "> Hello" in content
+    assert "**User**" in content
+    assert "**Assistant (thread-1)**" in content
+    assert "**Assistant**" in content
+    assert "> Hello" not in content
     assert "> Show me code" in content
     assert "> Here is **code**" in content
-    assert "- thread-id: <missing>" in content
-    assert "- turn-id: <missing>" in content
+    assert "> Need thread id" in content
 
 
 def test_multiline_messages_are_blockquoted(tmp_path: Path) -> None:
@@ -81,10 +86,10 @@ def test_multiline_messages_are_blockquoted(tmp_path: Path) -> None:
     summary_path = rebuild_summary(base_dir)
     content = summary_path.read_text(encoding="utf-8")
 
-    assert f"## {log_path.name}" in content
-    assert "### User (1/1)" in content
+    assert "<sub>2026-02-24 09:53:12.001Z</sub>" in content
+    assert "**User**" in content
     assert "> line-1\n> line-2" in content
-    assert "### Assistant" in content
+    assert "**Assistant (thread-ml)**" in content
     assert "> answer-1\n> \n> answer-3" in content
 
 
@@ -97,6 +102,7 @@ def test_missing_or_invalid_messages_are_rendered_best_effort(tmp_path: Path) ->
     empty_log = logs_dir / "2026-02-24T09-53-12.002Z_ev-empty.json"
     invalid_log = logs_dir / "2026-02-24T09-53-12.003Z_ev-invalid.json"
     empty_element_log = logs_dir / "2026-02-24T09-53-12.004Z_ev-empty-element.json"
+    last_empty_log = logs_dir / "2026-02-24T09-53-12.005Z_ev-last-empty.json"
 
     missing_log.write_text(
         json.dumps(
@@ -138,32 +144,45 @@ def test_missing_or_invalid_messages_are_rendered_best_effort(tmp_path: Path) ->
         ),
         encoding="utf-8",
     )
+    last_empty_log.write_text(
+        json.dumps(
+            {
+                "type": "agent-turn-complete",
+                "input-messages": ["previous", ""],
+                "last-assistant-message": "ok-last",
+            }
+        ),
+        encoding="utf-8",
+    )
 
     summary_path = rebuild_summary(base_dir)
     content = summary_path.read_text(encoding="utf-8")
 
-    def _section(log_name: str) -> str:
-        marker = f"## {log_name}\n"
+    def _section(timestamp: str) -> str:
+        marker = f"<sub>{timestamp}</sub>\n"
         start = content.index(marker) + len(marker)
-        end = content.find("\n## ", start)
+        end = content.find("\n<sub>", start)
         return content[start:] if end == -1 else content[start:end]
 
-    missing_section = _section(missing_log.name)
-    assert "### User\n> <missing>" in missing_section
-    assert "### Assistant\n> <missing>" in missing_section
+    missing_section = _section("2026-02-24 09:53:12.001Z")
+    assert "**User**\n> <missing>" in missing_section
+    assert "**Assistant (thread-missing)**\n> <missing>" in missing_section
 
-    empty_section = _section(empty_log.name)
-    assert "### User\n> <missing>" in empty_section
-    assert "### Assistant\n> <missing>" in empty_section
+    empty_section = _section("2026-02-24 09:53:12.002Z")
+    assert "**User**\n> <missing>" in empty_section
+    assert "**Assistant**\n> <missing>" in empty_section
 
-    invalid_section = _section(invalid_log.name)
-    assert "### User\n> <invalid>" in invalid_section
-    assert "### Assistant\n> <invalid>" in invalid_section
+    invalid_section = _section("2026-02-24 09:53:12.003Z")
+    assert "**User**\n> <invalid>" in invalid_section
+    assert "**Assistant**\n> <invalid>" in invalid_section
 
-    empty_element_section = _section(empty_element_log.name)
-    assert "### User (1/2)\n> <missing>" in empty_element_section
-    assert "### User (2/2)\n> next" in empty_element_section
-    assert "### Assistant\n> ok" in empty_element_section
+    empty_element_section = _section("2026-02-24 09:53:12.004Z")
+    assert "**User**\n> next" in empty_element_section
+    assert "**Assistant**\n> ok" in empty_element_section
+
+    last_empty_section = _section("2026-02-24 09:53:12.005Z")
+    assert "**User**\n> <missing>" in last_empty_section
+    assert "**Assistant**\n> ok-last" in last_empty_section
 
 
 def test_invalid_json_is_recorded(tmp_path: Path) -> None:
@@ -177,10 +196,9 @@ def test_invalid_json_is_recorded(tmp_path: Path) -> None:
     valid_log.write_text(
         json.dumps(
             {
-                "type": "agent-turn-complete",
                 "thread-id": "thread-2",
-                "turn-id": "turn-2",
-                "cwd": "/tmp/ok",
+                "input-messages": ["valid-input"],
+                "last-assistant-message": "valid-answer",
             }
         ),
         encoding="utf-8",
@@ -190,8 +208,10 @@ def test_invalid_json_is_recorded(tmp_path: Path) -> None:
     summary_path = rebuild_summary(base_dir)
     content = summary_path.read_text(encoding="utf-8")
 
-    assert f"## {valid_log.name}" in content
-    assert f"## {invalid_log.name}" in content
+    assert "<sub>2026-02-24 09:53:12.001Z</sub>" in content
+    assert "<sub>2026-02-24 09:53:12.002Z</sub>" in content
+    assert "**User**\n> valid-input" in content
+    assert "**Assistant (thread-2)**\n> valid-answer" in content
     assert "- parse error:" in content
 
 
