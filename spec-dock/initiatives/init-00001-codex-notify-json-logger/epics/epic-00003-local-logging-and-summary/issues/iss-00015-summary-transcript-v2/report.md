@@ -18,7 +18,7 @@ ID: "iss-00015"
 
 ## 実装記録（セッションログ） (必須)
 
-### 2026-02-25 10:05 - 10:42 UTC
+### 2026-02-25 10:05 - 10:46 UTC
 
 #### 対象
 - Step: S01, S02, S03
@@ -28,6 +28,7 @@ ID: "iss-00015"
 - `iss-00015` の要件/設計/計画を作成し、reviewer 指摘（thread-id 単独メタ行の抑止、timestamp 表示形式の固定）を反映して確定。
 - `summary.md` の出力を v2 に更新（User は `input-messages` の最後の 1 要素のみ、Assistant は `last-assistant-message` のみ）。
 - timestamp はファイル名プレフィックスを `YYYY-MM-DD HH:MM:SS.mmmZ` に整形して表示。
+- reviewer 指摘により、`input-messages` の要素型不正（例: `["ok", 1]`）を `<invalid>` としてテストに追加し、回帰耐性を補強。
 
 #### 実行コマンド / 結果
 ```bash
@@ -49,6 +50,7 @@ spec-dock: ok (validate) nodes=19
 - ba45c86 chore(spec-dock): iss-00015 の雛形を追加
 - 2735088 docs(spec-dock): iss-00015 の要件/設計/計画を追加
 - 67b2ad2 feat(summary): transcript v2 に簡素化
+- d5a2cdd test(summary): transcript v2 のinvalid判定を補強
 
 #### メモ
 - transcript v2 は「詳細は raw JSON（`logs/*.json`）を見る」前提で、summary の視認性を優先する。
