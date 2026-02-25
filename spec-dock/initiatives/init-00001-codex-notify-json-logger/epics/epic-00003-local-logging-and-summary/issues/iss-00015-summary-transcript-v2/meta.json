@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "type": "issue",
+  "id": "iss-00015",
+  "title": "Summary transcript v2",
+  "slug": "summary-transcript-v2",
+  "created_at": "2026-02-25T19:22:26+09:00",
+  "updated_at": "2026-02-25T19:22:26+09:00",
+  "parent_id": "epic-00003",
+  "initiative_id": "init-00001",
+  "epic_id": "epic-00003",
+  "github": {
+    "issue_number": 15
+  }
+}
