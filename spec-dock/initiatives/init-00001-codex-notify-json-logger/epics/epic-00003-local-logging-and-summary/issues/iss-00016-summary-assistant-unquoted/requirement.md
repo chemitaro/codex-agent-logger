@@ -3,7 +3,7 @@
 ID: "iss-00016"
 タイトル: "Summary assistant unquoted"
 関連GitHub: ["#16"]
-状態: "draft | approved"
+状態: "approved"
 作成者: "codex-agent"
 最終更新: "2026-02-25"
 親: ["epic-00003", "init-00001"]
