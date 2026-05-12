@@ -1,5 +1,6 @@
 from pathlib import Path
 from io import StringIO
+import json
 
 import pytest
 
@@ -103,6 +104,115 @@ def test_permission_request_subcommand_reads_stdin_as_notification_event(
     assert '"turn-id":"turn-1"' in saved_payloads[0]
     assert "Codex approval required" in saved_payloads[0]
     assert "git status" in saved_payloads[0]
+
+
+def test_notify_subcommand_skips_internal_title_telegram_but_saves_log(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    saved_path = Path("/tmp/workspace/.codex-log/logs/raw-payload.json")
+    saved_payloads: list[str] = []
+
+    def _save_raw_payload(raw_payload: str, *_args: object, **_kwargs: object) -> Path:
+        saved_payloads.append(raw_payload)
+        return saved_path
+
+    monkeypatch.setattr("codex_logger.cli.log_store.save_raw_payload", _save_raw_payload)
+    monkeypatch.setattr(
+        "codex_logger.cli.summary.rebuild_summary",
+        lambda *_args, **_kwargs: saved_path.parent.parent / "summary.md",
+    )
+    telegram_payloads: list[str] = []
+    monkeypatch.setattr(
+        "codex_logger.cli.telegram.send_last_message_best_effort",
+        lambda raw_payload, **_kwargs: telegram_payloads.append(raw_payload),
+    )
+
+    raw_payload = json.dumps(
+        {
+            "type": "agent-turn-complete",
+            "thread-id": "thread-1",
+            "turn-id": "turn-1",
+            "cwd": "/tmp/workspace",
+            "input-messages": [
+                "Generate a concise UI title for this task. Fill the structured title field."
+            ],
+            "last-assistant-message": json.dumps({"title": "defaultサブエージェント確認"}),
+        }
+    )
+
+    assert main(["notify", "--telegram", raw_payload]) == 0
+
+    stderr = capsys.readouterr().err
+    assert "telegram delivery skipped: internal turn (desktop-title-generation)" in stderr
+    assert saved_payloads == [raw_payload]
+    assert telegram_payloads == []
+
+
+def test_notify_subcommand_sends_normal_json_response(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved_path = Path("/tmp/workspace/.codex-log/logs/raw-payload.json")
+    monkeypatch.setattr(
+        "codex_logger.cli.log_store.save_raw_payload",
+        lambda *_args, **_kwargs: saved_path,
+    )
+    monkeypatch.setattr(
+        "codex_logger.cli.summary.rebuild_summary",
+        lambda *_args, **_kwargs: saved_path.parent.parent / "summary.md",
+    )
+    telegram_payloads: list[str] = []
+    monkeypatch.setattr(
+        "codex_logger.cli.telegram.send_last_message_best_effort",
+        lambda raw_payload, **_kwargs: telegram_payloads.append(raw_payload),
+    )
+
+    raw_payload = json.dumps(
+        {
+            "type": "agent-turn-complete",
+            "thread-id": "thread-1",
+            "input-messages": ["Return the response as JSON."],
+            "last-assistant-message": json.dumps({"title": "User requested title"}),
+        }
+    )
+
+    assert main(["notify", "--telegram", raw_payload]) == 0
+    assert telegram_payloads == [raw_payload]
+
+
+def test_permission_request_subcommand_bypasses_internal_turn_filter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved_path = Path("/tmp/workspace/.codex-log/logs/raw-payload.json")
+    monkeypatch.setattr(
+        "codex_logger.cli.log_store.save_raw_payload",
+        lambda *_args, **_kwargs: saved_path,
+    )
+    monkeypatch.setattr(
+        "codex_logger.cli.summary.rebuild_summary",
+        lambda *_args, **_kwargs: saved_path.parent.parent / "summary.md",
+    )
+    telegram_payloads: list[str] = []
+    monkeypatch.setattr(
+        "codex_logger.cli.telegram.send_last_message_best_effort",
+        lambda raw_payload, **_kwargs: telegram_payloads.append(raw_payload),
+    )
+
+    stdin_payload = json.dumps(
+        {
+            "session_id": "thread-1",
+            "turn_id": "turn-1",
+            "cwd": "/tmp/workspace",
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "echo ok",
+                "description": "Generate a concise UI title for this task.",
+            },
+        }
+    )
+
+    assert main(["permission-request", "--telegram"], stdin=StringIO(stdin_payload)) == 0
+    assert len(telegram_payloads) == 1
 
 
 @pytest.mark.parametrize(
