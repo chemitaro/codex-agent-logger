@@ -6,7 +6,7 @@ import sys
 from typing import TextIO
 
 from codex_logger import __version__
-from codex_logger import log_store, notification_event, payload, summary, telegram
+from codex_logger import internal_turn_filter, log_store, notification_event, payload, summary, telegram
 from codex_logger.console import error, warn
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,10 +72,15 @@ def main(argv: list[str] | None = None, *, stdin: TextIO | None = None) -> int:
             fallback_cwd=Path.cwd().resolve(strict=False),
         ).to_notify_payload_json()
 
-    return _handle_payload(raw_payload, telegram_enabled=args.telegram)
+    filter_internal_turns = args.command in {"legacy", "notify"}
+    return _handle_payload(
+        raw_payload,
+        telegram_enabled=args.telegram,
+        filter_internal_turns=filter_internal_turns,
+    )
 
 
-def _handle_payload(raw_payload: str, *, telegram_enabled: bool) -> int:
+def _handle_payload(raw_payload: str, *, telegram_enabled: bool, filter_internal_turns: bool) -> int:
     meta = payload.parse_best_effort(raw_payload)
 
     try:
@@ -97,6 +102,13 @@ def _handle_payload(raw_payload: str, *, telegram_enabled: bool) -> int:
         return 1
 
     if telegram_enabled:
+        if filter_internal_turns:
+            parsed_payload = payload.parse_json_object_best_effort(raw_payload)
+            if parsed_payload is not None:
+                decision = internal_turn_filter.should_skip_telegram(parsed_payload)
+                if decision.skip:
+                    warn(f"telegram delivery skipped: internal turn ({decision.rule_name})")
+                    return 0
         try:
             telegram.send_last_message_best_effort(
                 raw_payload,
