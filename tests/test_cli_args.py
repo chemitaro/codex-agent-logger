@@ -1,4 +1,5 @@
 from pathlib import Path
+from io import StringIO
 
 import pytest
 
@@ -30,6 +31,78 @@ def test_normal_run_without_payload_is_usage_error(capsys: pytest.CaptureFixture
 
     stderr = capsys.readouterr().err
     assert "usage:" in stderr
+
+
+def test_notify_subcommand_accepts_payload_json(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved_path = Path("/tmp/workspace/.codex-log/logs/raw-payload.json")
+    monkeypatch.setattr(
+        "codex_logger.cli.log_store.save_raw_payload",
+        lambda *_args, **_kwargs: saved_path,
+    )
+    monkeypatch.setattr(
+        "codex_logger.cli.summary.rebuild_summary",
+        lambda *_args, **_kwargs: saved_path.parent.parent / "summary.md",
+    )
+    telegram_payloads: list[str] = []
+    monkeypatch.setattr(
+        "codex_logger.cli.telegram.send_last_message_best_effort",
+        lambda raw_payload, **_kwargs: telegram_payloads.append(raw_payload),
+    )
+
+    raw_payload = (
+        '{"type":"agent-turn-complete","thread-id":"thread-1",'
+        '"last-assistant-message":"done"}'
+    )
+    args = parse_args(["notify", "--telegram", raw_payload])
+
+    assert args.command == "notify"
+    assert args.payload_json == raw_payload
+    assert args.telegram is True
+
+    assert main(["notify", "--telegram", raw_payload]) == 0
+    assert telegram_payloads == [raw_payload]
+
+
+def test_permission_request_subcommand_reads_stdin_as_notification_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved_path = Path("/tmp/workspace/.codex-log/logs/raw-payload.json")
+    saved_payloads: list[str] = []
+
+    def _save_raw_payload(raw_payload: str, *_args: object, **_kwargs: object) -> Path:
+        saved_payloads.append(raw_payload)
+        return saved_path
+
+    monkeypatch.setattr("codex_logger.cli.log_store.save_raw_payload", _save_raw_payload)
+    monkeypatch.setattr(
+        "codex_logger.cli.summary.rebuild_summary",
+        lambda *_args, **_kwargs: saved_path.parent.parent / "summary.md",
+    )
+    telegram_payloads: list[str] = []
+    monkeypatch.setattr(
+        "codex_logger.cli.telegram.send_last_message_best_effort",
+        lambda raw_payload, **_kwargs: telegram_payloads.append(raw_payload),
+    )
+
+    stdin_payload = (
+        '{"session_id":"thread-1","turn_id":"turn-1","cwd":"/tmp/workspace",'
+        '"tool_name":"Bash","tool_input":{"command":"git status"}}'
+    )
+
+    assert main(
+        ["permission-request", "--telegram"],
+        stdin=StringIO(stdin_payload),
+    ) == 0
+
+    assert len(saved_payloads) == 1
+    assert saved_payloads == telegram_payloads
+    assert '"type":"permission-request"' in saved_payloads[0]
+    assert '"thread-id":"thread-1"' in saved_payloads[0]
+    assert '"turn-id":"turn-1"' in saved_payloads[0]
+    assert "Codex approval required" in saved_payloads[0]
+    assert "git status" in saved_payloads[0]
 
 
 @pytest.mark.parametrize(
