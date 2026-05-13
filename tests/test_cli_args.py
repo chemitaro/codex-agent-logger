@@ -117,11 +117,14 @@ def test_notify_subcommand_skips_internal_title_telegram_but_saves_log(
         saved_payloads.append(raw_payload)
         return saved_path
 
+    rebuilt_dirs: list[Path] = []
+
+    def _rebuild_summary(base_dir: Path) -> Path:
+        rebuilt_dirs.append(base_dir)
+        return base_dir / "summary.md"
+
     monkeypatch.setattr("codex_logger.cli.log_store.save_raw_payload", _save_raw_payload)
-    monkeypatch.setattr(
-        "codex_logger.cli.summary.rebuild_summary",
-        lambda *_args, **_kwargs: saved_path.parent.parent / "summary.md",
-    )
+    monkeypatch.setattr("codex_logger.cli.summary.rebuild_summary", _rebuild_summary)
     telegram_payloads: list[str] = []
     monkeypatch.setattr(
         "codex_logger.cli.telegram.send_last_message_best_effort",
@@ -146,6 +149,7 @@ def test_notify_subcommand_skips_internal_title_telegram_but_saves_log(
     stderr = capsys.readouterr().err
     assert "telegram delivery skipped: internal turn (desktop-title-generation)" in stderr
     assert saved_payloads == [raw_payload]
+    assert rebuilt_dirs == [saved_path.parent.parent]
     assert telegram_payloads == []
 
 

@@ -38,6 +38,22 @@ INTERNAL_TURN_RULES: tuple[InternalTurnRule, ...] = (
         ),
         assistant_json_keys=frozenset({"message"}),
     ),
+    InternalTurnRule(
+        name="suggestions-generation",
+        input_patterns=(
+            re.compile(r"Generate 0 to 3 hyperpersonalized suggestions", re.IGNORECASE),
+            re.compile(r"Return 0 to 3 fresh suggestions", re.IGNORECASE),
+        ),
+        assistant_json_keys=frozenset({"suggestions"}),
+    ),
+    InternalTurnRule(
+        name="suggestions-exclude-generation",
+        input_patterns=(
+            re.compile(r"Avoid repeating these previously dismissed suggestions", re.IGNORECASE),
+            re.compile(r"dismissed suggestions", re.IGNORECASE),
+        ),
+        assistant_json_keys=frozenset({"exclude"}),
+    ),
 )
 
 
