@@ -108,6 +108,22 @@ def _handle_payload(raw_payload: str, *, telegram_enabled: bool, filter_internal
                 decision = internal_turn_filter.should_skip_telegram(parsed_payload)
                 if decision.skip:
                     warn(f"telegram delivery skipped: internal turn ({decision.rule_name})")
+                    telegram.write_delivery_diagnostics_best_effort(
+                        base_dir=base_dir,
+                        event_stem=saved_path.stem,
+                        outcome="skipped",
+                        reason=decision.reason or "internal Codex helper turn",
+                        context={
+                            "thread-id": meta.thread_id,
+                            "turn-id": meta.turn_id,
+                            "rule": decision.rule_name,
+                            "assistant-json-keys": ",".join(sorted(decision.assistant_json_keys)),
+                        },
+                        hints=[
+                            "Codex Desktop の内部 helper turn と判定されたため Telegram 送信を抑止しました。",
+                            "raw payload は .codex-log/logs/ に保存されています。",
+                        ],
+                    )
                     return 0
         try:
             telegram.send_last_message_best_effort(

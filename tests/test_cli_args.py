@@ -109,8 +109,9 @@ def test_permission_request_subcommand_reads_stdin_as_notification_event(
 def test_notify_subcommand_skips_internal_title_telegram_but_saves_log(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
 ) -> None:
-    saved_path = Path("/tmp/workspace/.codex-log/logs/raw-payload.json")
+    saved_path = tmp_path / ".codex-log" / "logs" / "raw-payload.json"
     saved_payloads: list[str] = []
 
     def _save_raw_payload(raw_payload: str, *_args: object, **_kwargs: object) -> Path:
@@ -151,6 +152,23 @@ def test_notify_subcommand_skips_internal_title_telegram_but_saves_log(
     assert saved_payloads == [raw_payload]
     assert rebuilt_dirs == [saved_path.parent.parent]
     assert telegram_payloads == []
+
+    diagnostics = saved_path.parent.parent / "telegram-errors" / "raw-payload.md"
+    assert diagnostics.read_text() == (
+        "# Telegram delivery diagnostics\n"
+        "\n"
+        "- outcome: skipped\n"
+        "- reason: internal Codex helper turn\n"
+        "- event: raw-payload\n"
+        "- thread-id: thread-1\n"
+        "- turn-id: turn-1\n"
+        "- rule: desktop-title-generation\n"
+        "- assistant-json-keys: title\n"
+        "\n"
+        "## Hints\n"
+        "- Codex Desktop の内部 helper turn と判定されたため Telegram 送信を抑止しました。\n"
+        "- raw payload は .codex-log/logs/ に保存されています。\n"
+    )
 
 
 def test_notify_subcommand_sends_normal_json_response(
