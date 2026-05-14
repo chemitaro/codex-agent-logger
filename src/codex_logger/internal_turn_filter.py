@@ -55,6 +55,15 @@ INTERNAL_TURN_RULES: tuple[InternalTurnRule, ...] = (
         ),
         assistant_json_keys=frozenset({"exclude"}),
     ),
+    InternalTurnRule(
+        name="approval-outcome-generation",
+        input_patterns=(
+            re.compile(r"approval request", re.IGNORECASE),
+            re.compile(r"approv(?:e|al).*request", re.IGNORECASE),
+            re.compile(r"outcome field", re.IGNORECASE),
+        ),
+        assistant_json_keys=frozenset({"outcome"}),
+    ),
 )
 
 
