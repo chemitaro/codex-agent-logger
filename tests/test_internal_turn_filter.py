@@ -135,6 +135,21 @@ def test_recent_suggestions_exclude_example_is_skipped() -> None:
     assert decision.rule_name == "suggestions-exclude-generation"
 
 
+def test_approval_outcome_generation_payload_is_skipped() -> None:
+    payload = {
+        "input-messages": [
+            "Review this approval request and write the result into the structured "
+            "outcome field."
+        ],
+        "last-assistant-message": json.dumps({"outcome": "allow"}),
+    }
+
+    decision = should_skip_telegram(payload)
+
+    assert decision.skip is True
+    assert decision.rule_name == "approval-outcome-generation"
+
+
 def test_normal_json_response_without_internal_marker_is_not_skipped() -> None:
     payload = {
         "input-messages": ["Return the response as JSON."],
@@ -157,6 +172,15 @@ def test_normal_exclude_json_without_internal_marker_is_not_skipped() -> None:
     payload = {
         "input-messages": ["Return the response as JSON."],
         "last-assistant-message": json.dumps({"exclude": []}),
+    }
+
+    assert should_skip_telegram(payload).skip is False
+
+
+def test_normal_outcome_json_without_internal_marker_is_not_skipped() -> None:
+    payload = {
+        "input-messages": ["Return the response as JSON."],
+        "last-assistant-message": json.dumps({"outcome": "allow"}),
     }
 
     assert should_skip_telegram(payload).skip is False
