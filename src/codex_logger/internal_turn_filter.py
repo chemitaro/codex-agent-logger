@@ -19,6 +19,7 @@ class SkipDecision:
     skip: bool
     rule_name: str | None = None
     reason: str | None = None
+    assistant_json_keys: frozenset[str] = frozenset()
 
 
 INTERNAL_TURN_RULES: tuple[InternalTurnRule, ...] = (
@@ -79,6 +80,7 @@ def should_skip_telegram(payload: dict[str, object]) -> SkipDecision:
             skip=True,
             rule_name=rule.name,
             reason="internal Codex helper turn",
+            assistant_json_keys=assistant_keys,
         )
 
     return SkipDecision(skip=False)

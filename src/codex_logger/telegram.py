@@ -237,6 +237,25 @@ def send_message(config: TelegramConfig, *, message_thread_id: int, text: str) -
     )
 
 
+def write_delivery_diagnostics_best_effort(
+    *,
+    base_dir: Path,
+    event_stem: str,
+    outcome: str,
+    reason: str,
+    context: dict[str, str | None],
+    hints: list[str],
+) -> None:
+    _write_telegram_diagnostics_best_effort(
+        base_dir=base_dir,
+        event_stem=event_stem,
+        outcome=outcome,
+        reason=reason,
+        context=context,
+        hints=hints,
+    )
+
+
 def _call_api(bot_token: str, *, method: str, payload: dict[str, object]) -> dict[str, object]:
     url = f"https://api.telegram.org/bot{bot_token}/{method}"
     body = json.dumps(payload).encode("utf-8")
@@ -323,6 +342,14 @@ def _write_telegram_diagnostics_best_effort(
     chunk = context.get("chunk")
     if chunk:
         lines.append(f"- chunk: {chunk}")
+
+    rule = context.get("rule")
+    if rule:
+        lines.append(f"- rule: {rule}")
+
+    assistant_json_keys = context.get("assistant-json-keys")
+    if assistant_json_keys:
+        lines.append(f"- assistant-json-keys: {assistant_json_keys}")
 
     if hints:
         lines.append("")
