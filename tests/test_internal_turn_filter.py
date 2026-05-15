@@ -31,6 +31,10 @@ def test_recent_title_generation_examples_are_skipped() -> None:
         "Review execute-initiative contract",
         "自動同期を確認",
         "Re-review iss-00093 plan amendment",
+        "Review S100 docs drift fix",
+        "Re-review iss-01818 removal",
+        "Monitor PR #97",
+        "Re-review failure policy wording",
     ):
         payload = {
             "input-messages": [input_message],
@@ -150,6 +154,53 @@ def test_approval_outcome_generation_payload_is_skipped() -> None:
     assert decision.rule_name == "approval-outcome-generation"
 
 
+def test_approval_outcome_review_payload_is_skipped() -> None:
+    input_message = (
+        "Assess the exact planned action below. Review this approval request "
+        "and write the result into the structured outcome field."
+    )
+
+    for assistant_message in (
+        {
+            "risk_level": "medium",
+            "user_authorization": "medium",
+            "outcome": "allow",
+            "rationale": (
+                "これは同一リポジトリ内の dogfooding 用 managed assets を "
+                "update . で上書き更新するローカル変更です。"
+            ),
+        },
+        {
+            "risk_level": "low",
+            "user_authorization": "high",
+            "outcome": "allow",
+            "rationale": (
+                "This recreates the default tmux server in a clean environment "
+                "after the user-approved shutdown."
+            ),
+        },
+        {
+            "risk_level": "medium",
+            "user_authorization": "high",
+            "outcome": "allow",
+            "rationale": (
+                "This sends a single command into the isolated diagnostic tmux "
+                "session the agent created to verify the requested fix."
+            ),
+        },
+    ):
+        payload = {
+            "input-messages": [input_message],
+            "last-assistant-message": json.dumps(assistant_message),
+        }
+
+        decision = should_skip_telegram(payload)
+
+        assert decision.skip is True
+        assert decision.rule_name == "approval-outcome-generation"
+        assert decision.assistant_json_keys == frozenset(assistant_message.keys())
+
+
 def test_normal_json_response_without_internal_marker_is_not_skipped() -> None:
     payload = {
         "input-messages": ["Return the response as JSON."],
@@ -181,6 +232,22 @@ def test_normal_outcome_json_without_internal_marker_is_not_skipped() -> None:
     payload = {
         "input-messages": ["Return the response as JSON."],
         "last-assistant-message": json.dumps({"outcome": "allow"}),
+    }
+
+    assert should_skip_telegram(payload).skip is False
+
+
+def test_normal_approval_review_json_without_internal_marker_is_not_skipped() -> None:
+    payload = {
+        "input-messages": ["Return the response as JSON."],
+        "last-assistant-message": json.dumps(
+            {
+                "risk_level": "low",
+                "user_authorization": "high",
+                "outcome": "allow",
+                "rationale": "User requested this JSON shape.",
+            }
+        ),
     }
 
     assert should_skip_telegram(payload).skip is False
